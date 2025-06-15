@@ -1,26 +1,33 @@
-import Layout from '../components/Layout';
-import './globals.css';
+"use client";
+
+import Layout from "../components/Layout";
+import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
+
 import {
-  ClerkProvider,
-  // SignInButton,
-  // SignUpButton,
-  // SignedIn,
-  // SignedOut,
-  // UserButton,
-} from '@clerk/nextjs'
+  useQuery,
+  useMutation,
+  useQueryClient,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 export default function RootLayout({
-    children,
-  }: {
-    children: React.ReactNode
-  }) {
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body>
-          <Layout>{children}</Layout>
-        </body>
-      </html>
-      </ClerkProvider>
+      <QueryClientProvider client={queryClient}>
+        <html lang="en">
+          <body>
+            <Layout>{children}</Layout>
+          </body>
+        </html>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }

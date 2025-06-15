@@ -1,7 +1,10 @@
 "use client";
 import React, { useState } from "react";
 import { Search, Filter, PlusCircle } from "lucide-react";
-import MainContent from '../../components/MainContent'; // Import the MainContent component
+import MainContent from "../../components/MainContent"; // Import the MainContent component
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { useUser } from "@clerk/nextjs";
 
 const CharacterCard = ({ name, description, image, onSelect }) => (
   <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105">
@@ -24,72 +27,86 @@ const CharacterSelectionPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedCharacter, setSelectedCharacter] = useState(null); // Track selected character
 
-  // Placeholder data - replace with actual character data in a real application
-  const characters = [
-    {
-      id: 1,
-      name: "Friendly Assistant",
-      category: "General",
-      description: "A helpful AI for everyday tasks.",
-      image: "/api/placeholder/300/200",
-    },
-    {
-      id: 2,
-      name: "Creative Writer",
-      category: "Creative",
-      description: "An AI to help with writing and brainstorming.",
-      image: "/api/placeholder/300/200",
-    },
-    {
-      id: 3,
-      name: "Code Helper",
-      category: "Technical",
-      description: "Assists with programming and debugging.",
-      image: "/api/placeholder/300/200",
-    },
-    {
-      id: 4,
-      name: "Language Tutor",
-      category: "Educational",
-      description: "Helps you learn new languages.",
-      image: "/api/placeholder/300/200",
-    },
-    {
-      id: 5,
-      name: "Fitness Coach",
-      category: "Health",
-      description: "Provides workout plans and nutrition advice.",
-      image: "/api/placeholder/300/200",
-    },
-    {
-      id: 6,
-      name: "Travel Planner",
-      category: "Lifestyle",
-      description: "Helps plan your perfect vacation.",
-      image: "/api/placeholder/300/200",
-    },
-  ];
+  const { user } = useUser();
 
-  const categories = [
-    "All",
-    "General",
-    "Creative",
-    "Technical",
-    "Educational",
-    "Health",
-    "Lifestyle",
-  ];
+  const { data } = useQuery({
+    queryKey: ["bots"],
+    queryFn: async () => {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/bots/all/${user?.id}`
+      );
+      return response.data;
+    },
+  });
 
-  const filteredCharacters = characters.filter(
-    (char) =>
-      (selectedCategory === "All" || char.category === selectedCategory) &&
-      char.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  console.log("data", data);
 
-  // If a character is selected, render the MainContent component instead
-  if (selectedCharacter) {
-    return <MainContent selectedCharacter={selectedCharacter} />;
-  }
+  // // Placeholder data - replace with actual character data in a real application
+  // const characters = [
+  //   {
+  //     id: 1,
+  //     name: "Friendly Assistant",
+  //     category: "General",
+  //     description: "A helpful AI for everyday tasks.",
+  //     image: "/api/placeholder/300/200",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Creative Writer",
+  //     category: "Creative",
+  //     description: "An AI to help with writing and brainstorming.",
+  //     image: "/api/placeholder/300/200",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Code Helper",
+  //     category: "Technical",
+  //     description: "Assists with programming and debugging.",
+  //     image: "/api/placeholder/300/200",
+  //   },
+  //   {
+  //     id: 4,
+  //     name: "Language Tutor",
+  //     category: "Educational",
+  //     description: "Helps you learn new languages.",
+  //     image: "/api/placeholder/300/200",
+  //   },
+  //   {
+  //     id: 5,
+  //     name: "Fitness Coach",
+  //     category: "Health",
+  //     description: "Provides workout plans and nutrition advice.",
+  //     image: "/api/placeholder/300/200",
+  //   },
+  //   {
+  //     id: 6,
+  //     name: "Travel Planner",
+  //     category: "Lifestyle",
+  //     description: "Helps plan your perfect vacation.",
+  //     image: "/api/placeholder/300/200",
+  //   },
+  // ];
+
+  // const categories = [
+  //   "All",
+  //   "General",
+  //   "Creative",
+  //   "Technical",
+  //   "Educational",
+  //   "Health",
+  //   "Lifestyle",
+  // ];
+
+  // const filteredCharacters = characters.filter(
+  //   (char) =>
+  //     (selectedCategory === "All" || char.category === selectedCategory) &&
+  //     char.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
+
+  // // If a character is selected, render the MainContent component instead
+  // if (selectedCharacter) {
+  //   return <MainContent selectedCharacter={selectedCharacter} />;
+  // }
 
   return (
     <div className="bg-gray-900 text-white min-h-screen">
@@ -110,9 +127,12 @@ const CharacterSelectionPage = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+            <Search
+              className="absolute left-3 top-2.5 text-gray-400"
+              size={20}
+            />
           </div>
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <Filter className="mr-2 text-gray-400" size={20} />
             <select
               className="border rounded-lg px-4 py-2 text-gray-900"
@@ -125,16 +145,16 @@ const CharacterSelectionPage = () => {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredCharacters.map((char) => (
+          {data?.bots.map((char) => (
             <CharacterCard
               key={char.id}
               name={char.name}
               description={char.description}
-              image={char.image}
+              image={char.avatar}
               onSelect={() => setSelectedCharacter(char)} // Set the selected character
             />
           ))}
