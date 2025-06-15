@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 
 const CreateCustomBotPage = () => {
   const [botName, setBotName] = useState('');
@@ -9,12 +10,63 @@ const CreateCustomBotPage = () => {
   const [botAvatar, setBotAvatar] = useState(null);
   const [botType, setBotType] = useState('free');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would typically send the data to your backend
-    console.log({ botName, botDescription, botPersonality, botExpertise, botAvatar, botType });
-    // Reset form or redirect user after submission
-  };
+  const { user } = useUser();
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+   if (!user) {
+      alert('You must be signed in to create a bot.');
+      return;
+    }
+    const userId = user.id;
+    console.log(userId)
+
+  let avatarBase64 = '';
+  if (botAvatar) {
+    const reader = new FileReader();
+    reader.readAsDataURL(botAvatar);
+    reader.onloadend = async () => {
+      avatarBase64 = reader.result;
+
+      const payload = {
+        name: botName,
+        description: botDescription,
+        prompt: botPersonality, 
+        avatar: avatarBase64,
+        visibility: botType,
+      };
+
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/bots/create/${userId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to create bot');
+        }
+
+        const data = await response.json();
+        console.log('Bot created:', data);
+        alert('Bot created successfully!');
+        setBotName('');
+        setBotDescription('');
+        setBotPersonality('');
+        setBotExpertise('');
+        setBotAvatar(null);
+        setBotType('free');
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to create bot. Please try again.');
+      }
+    };
+    return;
+  }
+};
+
+
 
   return (
     <div className="container mx-auto px-4 py-8">

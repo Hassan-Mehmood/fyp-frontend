@@ -2,7 +2,14 @@
 import React from 'react';
 import Link from 'next/link'; // Import Link for navigation
 import { Bot, PlusCircle, CreditCard, MessageSquare } from 'lucide-react';
-
+import {
+  // ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
 const FeatureCard = ({ icon, title, description, href }) => (
   <Link href={href}>
     <div className="bg-white p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-transform duration-300">
@@ -18,10 +25,34 @@ const FeatureCard = ({ icon, title, description, href }) => (
 const HomePage = () => {
   return (
     <div className="p-8 max-w-6xl mx-auto bg-gray-900">
-      <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">Welcome to Instant Bots</h1>
-        <p className="text-xl text-gray-300">Your personal AI companions for engaging conversations</p>
+     <header className="flex justify-between items-center mb-12">
+        <div>
+          <h1 className="text-4xl font-bold text-white mb-2">Welcome to Instant Bots</h1>
+          <p className="text-xl text-gray-300">
+            Your personal AI companions for engaging conversations
+          </p>
+        </div>
+
+        <div className="space-x-3">
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="bg-transparent border border-white text-white px-4 py-2 rounded hover:bg-white hover:text-gray-800 transition">
+                Login
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
+                Sign Up
+              </button>
+            </SignUpButton>
+          </SignedOut>
+
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+        </div>
       </header>
+
 
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-6 text-white">Get Started</h2>

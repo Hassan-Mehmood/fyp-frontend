@@ -47,6 +47,7 @@ const Sidebar = () => {
             {/* Profile Page Link */}
             <SidebarItem icon={<User size={20} />} label="Profile" href="/profile" isOpen={isOpen} />
             
+            
             {/* Character Selection Page Link */}
             <SidebarItem icon={<Bot size={20} />} label="Character Selection" href="/character-selection" isOpen={isOpen} />
             
