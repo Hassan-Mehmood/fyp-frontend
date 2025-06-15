@@ -64,6 +64,7 @@ const HelpFAQPage = () => {
             <Search className="absolute left-4 top-3.5 text-gray-400" />
           </div>
 
+
           {/* FAQ section */}
           <div className="bg-gray-800 rounded-lg p-8 mb-12 shadow-lg">
             <h2 className="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
