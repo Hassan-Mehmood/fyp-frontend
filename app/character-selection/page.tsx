@@ -1,14 +1,21 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { Search, Filter, PlusCircle } from "lucide-react";
 import MainContent from "../../components/MainContent"; // Import the MainContent component
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 
-const CharacterCard = ({ name, description, image, onSelect }) => (
+const CharacterCard = ({ name, description, image, onSelect, isFavorite, onToggleFavorite  }) => (
   <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105">
     <img src={image} alt={name} className="w-full h-48 object-cover" />
+
+    <button
+      onClick={onToggleFavorite}
+      className="absolute top-2 right-2 text-red-500 hover:scale-110 transition-transform"
+    >
+      {isFavorite ? "❤️" : "♡"} {/* ❤️ / ♡ */}
+    </button>
     <div className="p-4">
       <h3 className="text-lg font-semibold mb-2 text-white">{name}</h3>
       <p className="text-sm text-gray-300 mb-4">{description}</p>
@@ -26,7 +33,7 @@ const CharacterSelectionPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedCharacter, setSelectedCharacter] = useState(null); // Track selected character
-
+  const [favorites, setFavorites] = useState<string[]>([]); 
   const { user } = useUser();
 
   const { data } = useQuery({
@@ -38,6 +45,25 @@ const CharacterSelectionPage = () => {
       return response.data;
     },
   });
+   useEffect(() => {
+    if (user) {
+      axios.get(`/api/user/favorites/${user.id}`).then((res) => {
+        setFavorites(res.data.favorites);
+      });
+    }
+  }, [user]);
+
+  const handleToggleFavorite = async (botId: string) => {
+    const isFav = favorites.includes(botId);
+    setFavorites((prev) => isFav ? prev.filter((id) => id !== botId) : [...prev, botId]);
+
+    try {
+      await axios.post(`/api/user/favorites/toggle`, { botId });
+    } catch (error) {
+      console.error("Failed to update favorite", error);
+      setFavorites((prev) => isFav ? [...prev, botId] : prev.filter((id) => id !== botId));
+    }
+  };
 
   console.log("data", data);
 
@@ -155,7 +181,9 @@ const CharacterSelectionPage = () => {
               name={char.name}
               description={char.description}
               image={char.avatar}
-              onSelect={() => setSelectedCharacter(char)} // Set the selected character
+              onSelect={() => setSelectedCharacter(char)} 
+              isFavorite={favorites.includes(char.id)} 
+              onToggleFavorite={() => handleToggleFavorite(char.id)}
             />
           ))}
         </div>
