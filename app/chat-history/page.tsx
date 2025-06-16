@@ -12,38 +12,46 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 
-const ChatSessionCard = ({ session, onContinue, onDelete }) => (
-  <div className="bg-gray-800 rounded-lg shadow-md p-4 mb-6 hover:shadow-lg transition-shadow duration-300">
-    <div className="flex justify-between items-start mb-4">
-      <div className="flex items-center">
-        <Bot size={24} className="text-blue-500 mr-3" />
-        <h3 className="text-xl font-semibold text-white">
-          {session.characterName}
-        </h3>
+const ChatSessionCard = ({ session, onContinue, onDelete }) => {
+  const { bot, id, updated_at, message } = session;
+
+  return (
+    <div className="bg-gray-800 rounded-lg shadow-md p-4 mb-6 hover:shadow-lg transition-shadow duration-300">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center">
+          <Bot size={24} className="text-blue-500 mr-3" />
+          <div>
+            <h3 className="text-xl font-semibold text-white">{bot?.name || "Unnamed Bot"}</h3>
+            <p className="text-sm text-gray-400">{bot?.description || "No description"}</p>
+          </div>
+        </div>
+        <span className="text-sm text-gray-400 flex items-center">
+          <Clock size={16} className="mr-1" />
+          {new Date(updated_at).toLocaleDateString()}
+        </span>
       </div>
-      <span className="text-sm text-gray-400 flex items-center">
-        <Clock size={16} className="mr-1" />
-        {session.date}
-      </span>
+
+      <p className="text-gray-300 mb-6">{message}</p>
+
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => onContinue(id)}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300 flex items-center"
+        >
+          <MessageSquare size={18} className="mr-2" />
+          Continue Chat
+        </button>
+        <button
+          onClick={() => onDelete(id)}
+          className="text-red-500 hover:text-red-600 transition duration-300"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
     </div>
-    <p className="text-gray-300 mb-6">{session.lastMessage}</p>
-    <div className="flex justify-between items-center">
-      <button
-        onClick={() => onContinue(session.id)}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300 flex items-center"
-      >
-        <MessageSquare size={18} className="mr-2" />
-        Continue Chat
-      </button>
-      <button
-        onClick={() => onDelete(session.id)}
-        className="text-red-500 hover:text-red-600 transition duration-300"
-      >
-        <Trash2 size={18} />
-      </button>
-    </div>
-  </div>
-);
+  );
+};
+
 
 const ChatHistoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -128,9 +136,9 @@ const ChatHistoryPage = () => {
           </p>
         </header>
 
-        <div className="flex flex-col md:flex-row justify-between items-center mb-12">
+        {/* <div className="flex flex-col md:flex-row justify-between items-center mb-12"> */}
           {/* Search Bar */}
-          <div className="relative w-full md:w-64 mb-4 md:mb-0">
+          {/* <div className="relative w-full md:w-64 mb-4 md:mb-0">
             <input
               type="text"
               placeholder="Search chats..."
@@ -139,10 +147,10 @@ const ChatHistoryPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-          </div>
+          </div> */}
 
           {/* Date Picker */}
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <Calendar className="mr-2 text-gray-400" size={20} />
             <input
               type="date"
@@ -150,8 +158,8 @@ const ChatHistoryPage = () => {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
-          </div>
-        </div>
+          </div> */}
+        {/* </div> */}
 
         <div className="space-y-6">
           {data?.chats.map((chat) => (
