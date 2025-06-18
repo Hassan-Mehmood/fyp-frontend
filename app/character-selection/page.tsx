@@ -1,12 +1,19 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { Search, Filter, PlusCircle } from "lucide-react";
 import MainContent from "../../components/MainContent"; // Import the MainContent component
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 
-const CharacterCard = ({ name, description, image, onSelect, isFavorite, onToggleFavorite  }) => (
+const CharacterCard = ({
+  name,
+  description,
+  image,
+  onSelect,
+  isFavorite,
+  onToggleFavorite,
+}) => (
   <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105">
     <img src={image} alt={name} className="w-full h-48 object-cover" />
 
@@ -33,35 +40,61 @@ const CharacterSelectionPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedCharacter, setSelectedCharacter] = useState(null); // Track selected character
-  const [favorites, setFavorites] = useState<string[]>([]); 
+  const [favorites, setFavorites] = useState<string[]>([]);
   const { user } = useUser();
 
-  const { data } = useQuery({
-    queryKey: ["bots"],
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["botsAndFavs", user?.id],
     queryFn: async () => {
-      const response = await axios.get(
-        `http://127.0.0.1:8000/bots/all/${user?.id}`
-      );
-      return response.data;
+      if (!user) return { bots: [], favIds: [] };
+      const [botsRes, favRes] = await Promise.all([
+        axios.get(`http://127.0.0.1:8000/bots/all/${user.id}`),
+        axios.get(`http://127.0.0.1:8000/bots/favourite-bots/${user.id}`),
+      ]);
+
+      return {
+        bots: botsRes.data.bots, // your list of all bots
+        favIds: favRes.data.favorites.map((bot: any) => bot.id), // array of favorite‑bot IDs
+      };
     },
+    enabled: !!user, // only run this query if user is defined
   });
-   useEffect(() => {
-    if (user) {
-      axios.get(`/api/user/favorites/${user.id}`).then((res) => {
-        setFavorites(res.data.favorites);
-      });
+
+  useEffect(() => {
+    if (data) {
+      setFavorites(data.favIds);
     }
-  }, [user]);
+  }, [data]);
 
+  if (isLoading) {
+    return <div className="text-center text-gray-400">Loading...</div>;
+  }
   const handleToggleFavorite = async (botId: string) => {
-    const isFav = favorites.includes(botId);
-    setFavorites((prev) => isFav ? prev.filter((id) => id !== botId) : [...prev, botId]);
+    const userId = user?.id;
+    if (!userId) {
+      console.error("User not logged in");
+      return;
+    }
 
-    try {
-      await axios.post(`/api/user/favorites/toggle`, { botId });
-    } catch (error) {
-      console.error("Failed to update favorite", error);
-      setFavorites((prev) => isFav ? [...prev, botId] : prev.filter((id) => id !== botId));
+    if (favorites.includes(botId)) {
+      // Remove from favorites
+      setFavorites(favorites.filter((id) => id !== botId));
+
+      await axios.post(`http://127.0.0.1:8000/bots/remove-favourite`, {
+        botId,
+        userId,
+      });
+    } else {
+      // Add to favorites
+      setFavorites([...favorites, botId]);
+      try {
+        await axios.post(`http://127.0.0.1:8000/bots/add-favourite`, {
+          botId,
+          userId,
+        });
+      } catch (error) {
+        console.error("Failed to update favorite", error);
+      }
     }
   };
 
@@ -181,8 +214,8 @@ const CharacterSelectionPage = () => {
               name={char.name}
               description={char.description}
               image={char.avatar}
-              onSelect={() => setSelectedCharacter(char)} 
-              isFavorite={favorites.includes(char.id)} 
+              onSelect={() => setSelectedCharacter(char)}
+              isFavorite={favorites.includes(char.id)}
               onToggleFavorite={() => handleToggleFavorite(char.id)}
             />
           ))}
