@@ -98,8 +98,6 @@ const CharacterSelectionPage = () => {
     }
   };
 
-  console.log("data", data);
-
   // // Placeholder data - replace with actual character data in a real application
   // const characters = [
   //   {
@@ -163,9 +161,9 @@ const CharacterSelectionPage = () => {
   // );
 
   // // If a character is selected, render the MainContent component instead
-  // if (selectedCharacter) {
-  //   return <MainContent selectedCharacter={selectedCharacter} />;
-  // }
+  if (selectedCharacter) {
+    return <MainContent selectedCharacter={selectedCharacter} />;
+  }
 
   return (
     <div className="bg-gray-900 text-white min-h-screen">

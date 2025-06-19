@@ -78,7 +78,7 @@ useEffect(() => {
       try {
       const response = await axios.post("http://127.0.0.1:8000/chat", {
         message: inputMessage,
-        model: "gpt-3.5",
+        model: 'groq:llama3-8b-8192',
         user_id: userId,
         bot_id: botId,
         chat_history: updatedMessages.map((m) => ({
