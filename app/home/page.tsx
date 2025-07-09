@@ -10,35 +10,41 @@ import {
 } from '@clerk/nextjs';
 
 const FeatureCard = ({ icon, title, description, href, gradient = false }) => (
-  <Link href={href}>
-    <div className={`group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer ${
+  <Link href={href} className="h-full flex">
+  <div className={`flex flex-col h-full group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer ${
+    gradient 
+      ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white p-6' 
+      : 'bg-white dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+  }`}>
+    <div className={`flex items-center justify-center w-12 h-12 rounded-lg mb-4 ${
       gradient 
-        ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white p-6' 
-        : 'bg-white dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+        ? 'bg-white/20' 
+        : 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
     }`}>
-      <div className={`flex items-center justify-center w-12 h-12 rounded-lg mb-4 ${
-        gradient 
-          ? 'bg-white/20' 
-          : 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-      }`}>
-        {icon}
-      </div>
-      <h3 className={`text-lg font-semibold mb-2 ${gradient ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-        {title}
-      </h3>
-      <p className={`text-sm mb-4 ${gradient ? 'text-white/80' : 'text-gray-600 dark:text-gray-300'}`}>
-        {description}
-      </p>
+      {icon}
+    </div>
+    <h3 className={`text-lg font-semibold mb-2 ${gradient ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+      {title}
+    </h3>
+    <p className={`text-sm mb-4 ${gradient ? 'text-white/80' : 'text-gray-600 dark:text-gray-300'}`}>
+      {description}
+    </p>
+
+    {/* This pushes the CTA to the bottom */}
+    <div className="mt-auto">
       <div className={`flex items-center text-sm font-medium group-hover:translate-x-1 transition-transform ${
         gradient ? 'text-white' : 'text-blue-600 dark:text-blue-400'
       }`}>
         Get Started <ArrowRight size={16} className="ml-1" />
       </div>
-      {gradient && (
-        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-4 translate-x-4"></div>
-      )}
     </div>
-  </Link>
+
+    {gradient && (
+      <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-4 translate-x-4"></div>
+    )}
+  </div>
+</Link>
+
 );
 
 const StatCard = ({ number, label, icon }) => (
@@ -141,69 +147,50 @@ const HomePage = () => {
 
         {/* Features Grid */}
         <section className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Key Features</h2>
-            <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-              <Sparkles size={16} className="mr-1" />
-              Powered by AI
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FeatureCard
-              icon={<Bot size={24} />}
-              title="Role-Based Characters"
-              description="Choose from a variety of pre-configured characters with unique personalities"
-              href="/character-selection"
-            />
-            <FeatureCard
-              icon={<PlusCircle size={24} />}
-              title="Custom Bot Creation"
-              description="Design and personalize your own AI companions with custom traits"
-              href="/custom-bot"
-              gradient={true}
-            />
-            <FeatureCard
-              icon={<CreditCard size={24} />}
-              title="Flexible Credits"
-              description="Access premium features with our transparent credit system"
-              href="/credits"
-            />
-            <FeatureCard
-              icon={<MessageSquare size={24} />}
-              title="Smart Conversations"
-              description="Enjoy context-aware chats that remember your preferences"
-              href="/chat-history"
-            />
-          </div>
-        </section>
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Key Features</h2>
+    <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
+      <Sparkles size={16} className="mr-1" />
+      Powered by AI
+    </div>
+  </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="h-full flex">
+      <FeatureCard
+        icon={<Bot size={24} />}
+        title="Role-Based Characters"
+        description="Choose from a variety of pre-configured characters with unique personalities"
+        href="/character-selection"
+      />
+    </div>
+    <div className="h-full flex">
+      <FeatureCard
+        icon={<PlusCircle size={24} />}
+        title="Custom Bot Creation"
+        description="Design and personalize your own AI companions with custom traits"
+        href="/custom-bot"
+        gradient={true}
+      />
+    </div>
+    <div className="h-full flex">
+      <FeatureCard
+        icon={<CreditCard size={24} />}
+        title="Flexible Credits"
+        description="Access premium features with our transparent credit system"
+        href="/credits"
+      />
+    </div>
+    <div className="h-full flex">
+      <FeatureCard
+        icon={<MessageSquare size={24} />}
+        title="Smart Conversations"
+        description="Enjoy context-aware chats that remember your preferences"
+        href="/chat-history"
+      />
+    </div>
+  </div>
+</section>
 
-        {/* Recent Conversations */}
-        <section>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Recent Conversations</h2>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 text-center">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageSquare size={24} className="text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No conversations yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              Start your first conversation with an AI companion. Choose from our pre-built characters or create your own custom bot.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/character-selection">
-                <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                  Browse Characters
-                </button>
-              </Link>
-              <Link href="/custom-bot">
-                <button className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
-                  Create Custom Bot
-                </button>
-              </Link>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   );

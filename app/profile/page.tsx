@@ -1,4 +1,3 @@
-import React from "react";
 import {
   User,
   CreditCard,
@@ -8,30 +7,26 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { currentUser } from "@clerk/nextjs/server";
-
+import EditProfileSection from "./EditProfileSection";
 import axios from "axios";
 
 const ProfileSection = ({ icon, title, children }) => (
   <div className="bg-gray-800 p-6 rounded-lg shadow-md mb-6">
-    {/* Changed to dark background */}
     <div className="flex items-center mb-4">
       {icon}
-      <h2 className="text-xl font-semibold ml-2 text-white">{title}</h2>{" "}
-      {/* White text for section title */}
+      <h2 className="text-xl font-semibold ml-2 text-white">{title}</h2>
     </div>
     {children}
   </div>
 );
 
-const ProfilePage = async () => {
+export default async function ProfilePage() {
   const user = await currentUser();
 
   if (!user) {
     return (
       <div className="p-8 max-w-6xl mx-auto bg-gray-900">
-        <p className="text-white">
-          You must be signed in to view your profile.
-        </p>
+        <p className="text-white">You must be signed in to view your profile.</p>
       </div>
     );
   }
@@ -46,19 +41,15 @@ const ProfilePage = async () => {
     );
   }
 
-  console.log("Response", response.data);
-
   return (
     <div className="p-8 max-w-6xl mx-auto bg-gray-900">
-      {/* Dark background for the entire page */}
       <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">Your Profile</h1>{" "}
-        {/* White text for the main title */}
+        <h1 className="text-4xl font-bold text-white mb-4">Your Profile</h1>
         <p className="text-xl text-gray-300">
           Manage your account and view your Instant Bots activity
-        </p>{" "}
-        {/* Light gray for subtitle */}
+        </p>
       </header>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <ProfileSection
@@ -67,14 +58,14 @@ const ProfilePage = async () => {
           >
             <p className="text-white">
               <strong>Name:</strong> {user?.fullName}
-            </p>{" "}
-            {/* White text for details */}
-            <p className="text-white">
-              <strong>Email:</strong> {user?.emailAddresses[0].emailAddress}
             </p>
-            <button className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300">
-              Edit Profile
-            </button>
+            <p className="text-white">
+              <strong>Email:</strong>{" "}
+              {user?.emailAddresses[0].emailAddress}
+            </p>
+
+            {/* ✅ Client Component for edit button */}
+            <EditProfileSection />
           </ProfileSection>
 
           <ProfileSection
@@ -83,8 +74,7 @@ const ProfilePage = async () => {
           >
             <p className="text-white">
               {/* You've had {user.totalChats} conversations with our bots. */}
-            </p>{" "}
-            {/* White text for details */}
+            </p>
             <button className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300">
               View Chat History
             </button>
@@ -95,11 +85,7 @@ const ProfilePage = async () => {
             title="Favorite Bots"
           >
             <ul className="list-disc list-inside text-white">
-              {" "}
-              {/* White text for list */}
-              {/* {user.favoriteBots.map((bot, index) => (
-                <li key={index}>{bot}</li>
-              ))} */}
+              {/* Your favorite bots */}
             </ul>
             <button className="mt-4 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition duration-300">
               Manage Favorites
@@ -114,8 +100,7 @@ const ProfilePage = async () => {
           >
             <p className="text-3xl font-bold text-center my-4 text-white">
               {/* {user.credits} */}
-            </p>{" "}
-            {/* White text for credits */}
+            </p>
             <button className="w-full bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition duration-300">
               Buy More Credits
             </button>
@@ -125,8 +110,7 @@ const ProfilePage = async () => {
             icon={<PlusCircle size={24} className="text-indigo-500" />}
             title="Custom Bots"
           >
-            <p className="text-white">Create your own AI companion!</p>{" "}
-            {/* White text for description */}
+            <p className="text-white">Create your own AI companion!</p>
             <button className="mt-4 w-full bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition duration-300">
               Create Custom Bot
             </button>
@@ -144,6 +128,4 @@ const ProfilePage = async () => {
       </div>
     </div>
   );
-};
-
-export default ProfilePage;
+}
