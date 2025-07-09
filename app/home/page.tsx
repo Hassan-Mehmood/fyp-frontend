@@ -1,116 +1,210 @@
-
 import React from 'react';
-import Link from 'next/link'; // Import Link for navigation
-import { Bot, PlusCircle, CreditCard, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { Bot, PlusCircle, CreditCard, MessageSquare, ArrowRight, Sparkles, Users, Zap } from 'lucide-react';
 import {
-  // ClerkProvider,
   SignInButton,
   SignUpButton,
   SignedIn,
   SignedOut,
   UserButton,
-} from '@clerk/nextjs'
-const FeatureCard = ({ icon, title, description, href }) => (
+} from '@clerk/nextjs';
+
+const FeatureCard = ({ icon, title, description, href, gradient = false }) => (
   <Link href={href}>
-    <div className="bg-white p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-transform duration-300">
-      <div className="flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-500 rounded-full mb-4">
+    <div className={`group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer ${
+      gradient 
+        ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white p-6' 
+        : 'bg-white dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+    }`}>
+      <div className={`flex items-center justify-center w-12 h-12 rounded-lg mb-4 ${
+        gradient 
+          ? 'bg-white/20' 
+          : 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
+      }`}>
         {icon}
       </div>
-      <h3 className="text-lg font-semibold mb-2 text-gray-900">{title}</h3>
-      <p className="text-sm text-gray-500">{description}</p>
+      <h3 className={`text-lg font-semibold mb-2 ${gradient ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+        {title}
+      </h3>
+      <p className={`text-sm mb-4 ${gradient ? 'text-white/80' : 'text-gray-600 dark:text-gray-300'}`}>
+        {description}
+      </p>
+      <div className={`flex items-center text-sm font-medium group-hover:translate-x-1 transition-transform ${
+        gradient ? 'text-white' : 'text-blue-600 dark:text-blue-400'
+      }`}>
+        Get Started <ArrowRight size={16} className="ml-1" />
+      </div>
+      {gradient && (
+        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-4 translate-x-4"></div>
+      )}
     </div>
   </Link>
 );
 
+const StatCard = ({ number, label, icon }) => (
+  <div className="text-center">
+    <div className="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg mx-auto mb-3">
+      {icon}
+    </div>
+    <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{number}</div>
+    <div className="text-sm text-gray-600 dark:text-gray-400">{label}</div>
+  </div>
+);
+
 const HomePage = () => {
   return (
-    <div className="p-8 max-w-6xl mx-auto bg-gray-900">
-     <header className="flex justify-between items-center mb-12">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Welcome to Instant Bots</h1>
-          <p className="text-xl text-gray-300">
-            Your personal AI companions for engaging conversations
-          </p>
-        </div>
-
-        <div className="space-x-3">
-          <SignedOut>
-            <SignInButton mode="modal">
-              <button className="bg-transparent border border-white text-white px-4 py-2 rounded hover:bg-white hover:text-gray-800 transition">
-                Login
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
-                Sign Up
-              </button>
-            </SignUpButton>
-          </SignedOut>
-
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" />
-          </SignedIn>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 ml-64">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Welcome to Instant Bots
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300">
+                Your personal AI companions for engaging conversations
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    Sign In
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                    Get Started
+                  </button>
+                </SignUpButton>
+              </SignedOut>
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+            </div>
+          </div>
         </div>
       </header>
 
+      <main className="px-8 py-8">
+        {/* Quick Actions */}
+        <section className="mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <Link href="/character-selection" className="flex-1">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 group">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Choose a Character</h3>
+                    <p className="text-blue-100 text-sm">Start chatting with pre-built AI companions</p>
+                  </div>
+                  <Bot size={32} className="group-hover:scale-110 transition-transform" />
+                </div>
+              </div>
+            </Link>
+            <Link href="/custom-bot" className="flex-1">
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 group">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Create Custom Bot</h3>
+                    <p className="text-purple-100 text-sm">Design your own AI personality</p>
+                  </div>
+                  <PlusCircle size={32} className="group-hover:scale-110 transition-transform" />
+                </div>
+              </div>
+            </Link>
+          </div>
+        </section>
 
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold mb-6 text-white">Get Started</h2>
-        <div className="flex flex-col md:flex-row justify-center gap-4 mb-8">
-          {/* Link to Character Selection Page */}
-          <Link href="/character-selection">
-            <button className="w-64 bg-blue-500 text-white py-3 px-6 rounded-lg shadow hover:bg-blue-600 transition duration-300">
-              Choose a Character
-            </button>
-          </Link>
-          {/* Link to Create Custom Bot Page */}
-          <Link href="/custom-bot">
-            <button className="w-64 bg-green-500 text-white py-3 px-6 rounded-lg shadow hover:bg-green-600 transition duration-300">
-              Create Custom Bot
-            </button>
-          </Link>
-        </div>
-      </section>
+        {/* Stats */}
+        <section className="mb-12">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <StatCard 
+                number="10+" 
+                label="Available Characters" 
+                icon={<Users size={20} />} 
+              />
+              <StatCard 
+                number="100" 
+                label="Credits Available" 
+                icon={<CreditCard size={20} />} 
+              />
+              <StatCard 
+                number="0" 
+                label="Conversations Started" 
+                icon={<MessageSquare size={20} />} 
+              />
+            </div>
+          </div>
+        </section>
 
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold mb-6 text-white">Key Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <FeatureCard
-            icon={<Bot size={24} />}
-            title="Role-Based Characters"
-            description="Choose from a variety of pre-configured characters or create your own"
-            href="/character-selection" // Navigates to the Character Selection page
-          />
-          <FeatureCard
-            icon={<PlusCircle size={24} />}
-            title="Custom Bot Creation"
-            description="Design and personalize your own AI companions"
-            href="/custom-bot" // Navigates to the Custom Bot Creation page
-          />
-          <FeatureCard
-            icon={<CreditCard size={24} />}
-            title="Premium Features"
-            description="Access premium bots and features with our flexible credit system"
-            href="/credits" // Navigates to the Credits page
-          />
-          <FeatureCard
-            icon={<MessageSquare size={24} />}
-            title="Context-Aware Chats"
-            description="Enjoy dynamic conversations tailored to your chosen characters"
-            href="/chat-history" // Navigates to the Chat History or Start Chat page
-          />
-        </div>
-      </section>
+        {/* Features Grid */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Key Features</h2>
+            <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
+              <Sparkles size={16} className="mr-1" />
+              Powered by AI
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FeatureCard
+              icon={<Bot size={24} />}
+              title="Role-Based Characters"
+              description="Choose from a variety of pre-configured characters with unique personalities"
+              href="/character-selection"
+            />
+            <FeatureCard
+              icon={<PlusCircle size={24} />}
+              title="Custom Bot Creation"
+              description="Design and personalize your own AI companions with custom traits"
+              href="/custom-bot"
+              gradient={true}
+            />
+            <FeatureCard
+              icon={<CreditCard size={24} />}
+              title="Flexible Credits"
+              description="Access premium features with our transparent credit system"
+              href="/credits"
+            />
+            <FeatureCard
+              icon={<MessageSquare size={24} />}
+              title="Smart Conversations"
+              description="Enjoy context-aware chats that remember your preferences"
+              href="/chat-history"
+            />
+          </div>
+        </section>
 
-      <section>
-        <h2 className="text-2xl font-semibold mb-6 text-white">Recent Conversations</h2>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <p className="text-gray-300 mb-4">You haven't had any conversations yet. Start chatting with a bot to see your recent interactions here!</p>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300">
-            Start a New Chat
-          </button>
-        </div>
-      </section>
+        {/* Recent Conversations */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Recent Conversations</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 text-center">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageSquare size={24} className="text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              No conversations yet
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              Start your first conversation with an AI companion. Choose from our pre-built characters or create your own custom bot.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/character-selection">
+                <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                  Browse Characters
+                </button>
+              </Link>
+              <Link href="/custom-bot">
+                <button className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
+                  Create Custom Bot
+                </button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
