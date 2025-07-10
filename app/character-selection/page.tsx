@@ -197,13 +197,6 @@ const CharacterSelectionPage = () => {
             )}
           </div>
         )}
-
-        <div className="text-center">
-          <button className="bg-green-500 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-green-600 transition duration-300 flex items-center justify-center mx-auto">
-            <PlusCircle size={24} className="mr-2" />
-            Create Custom Character
-          </button>
-        </div>
       </div>
     </div>
   );
