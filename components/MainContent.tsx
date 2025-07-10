@@ -35,9 +35,6 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useUser();
-
-
-
   
   const { data: messageHistory } = useQuery({
     queryKey: ["messageHistory", user?.id, selectedCharacter?.id],
@@ -49,10 +46,10 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
       setMessages(response.data.chat_history || []);
       return response.data;
     },
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    refetchInterval: 10000,
+    // refetchOnWindowFocus: ,
+    // refetchOnMount: false,
+    // refetchOnReconnect: false,
+    // refetchInterval: 10000,
   });
   
 
@@ -70,17 +67,6 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
       setMessages(updatedMessages);
       setInputMessage("");
       setIsTyping(true);
-
-      // Simulate API call for demo
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: Date.now() + 1,
-          content: `This is a demo response from ${selectedModel.name}. In your actual implementation, replace this with your API call.`,
-          role: "assistant",
-        };
-        setMessages((prev) => [...prev, botResponse]);
-        setIsTyping(false);
-      }, 1500);
 
       try {
         const response = await axios.post("http://127.0.0.1:8000/chat", {
