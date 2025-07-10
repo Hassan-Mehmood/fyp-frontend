@@ -34,12 +34,10 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // const { user } = useUser();
+  const { user } = useUser();
 
-  // Mock user for demo
-  const user = { id: "demo-user" };
 
-  // Commented out for demo - replace with your actual API calls
+
   
   const { data: messageHistory } = useQuery({
     queryKey: ["messageHistory", user?.id, selectedCharacter?.id],

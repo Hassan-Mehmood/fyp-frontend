@@ -181,22 +181,6 @@ const Sidebar = () => {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search size={16} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-        <input
-          type="text"
-          placeholder="Search"
-          className={`w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-colors duration-200 ${
-            isDarkMode 
-              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-purple-500' 
-              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-500'
-          } border focus:outline-none focus:ring-2 ${isDarkMode ? 'focus:ring-purple-500/20' : 'focus:ring-blue-500/20'}`}
-        />
-        <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-          ⌘
-        </span>
-      </div>
 
       {/* Navigation Section */}
       <div className="mb-6 flex-1">
