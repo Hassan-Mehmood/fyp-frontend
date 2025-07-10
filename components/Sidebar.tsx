@@ -53,7 +53,7 @@ const Sidebar = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const navigationItems = [
-    { icon: <Home size={18} />, label: "Home", href: "/", requiresAuth: false },
+    { icon: <Home size={18} />, label: "Home", href: "/home", requiresAuth: false },
     { icon: <User size={18} />, label: "Profile", href: "/profile", requiresAuth: true },
     { icon: <Bot size={18} />, label: "Character Selection", href: "/character-selection", requiresAuth: true },
     { icon: <PlusCircle size={18} />, label: "Create Custom Bot", href: "/custom-bot", requiresAuth: true },
