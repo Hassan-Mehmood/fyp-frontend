@@ -53,7 +53,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   });
   
 
-  const isLoading = false; // Set to false for demo
+  const isLoading = false; 
 
   const handleSendMessage = async () => {
     if (inputMessage.trim()) {

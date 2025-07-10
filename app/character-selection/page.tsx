@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, use } from "react";
-import { Search, Filter, PlusCircle } from "lucide-react";
+import { Search, Filter, PlusCircle, Heart } from "lucide-react";
 import MainContent from "../../components/MainContent"; // Import the MainContent component
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -14,7 +14,7 @@ const CharacterCard = ({
   isFavorite,
   onToggleFavorite,
 }) => (
-  <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105">
+  <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 relative">
     <img src={image} alt={name} className="w-full h-48 object-cover" />
 
     <button
@@ -40,35 +40,26 @@ const CharacterSelectionPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedCharacter, setSelectedCharacter] = useState(null); // Track selected character
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const { user } = useUser();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["botsAndFavs", user?.id],
+    queryKey: ["bots", user?.id],
     queryFn: async () => {
-      if (!user) return { bots: [], favIds: [] };
-      const [botsRes, favRes] = await Promise.all([
-        axios.get(`http://127.0.0.1:8000/bots/all/${user.id}`),
-        axios.get(`http://127.0.0.1:8000/bots/favourite-bots/${user.id}`),
-      ]);
-
+      if (!user) return { bots: [] };
+      const botsRes = await axios.get(`http://127.0.0.1:8000/bots/all/${user.id}`);
+      
       return {
-        bots: botsRes.data.bots, // your list of all bots
-        favIds: favRes.data.favorites.map((bot: any) => bot.id), // array of favorite‑bot IDs
+        bots: botsRes.data.bots, // your list of all bots with favorite property
       };
     },
     enabled: !!user, // only run this query if user is defined
   });
 
-  useEffect(() => {
-    if (data) {
-      setFavorites(data.favIds);
-    }
-  }, [data]);
-
   if (isLoading) {
     return <div className="text-center text-gray-400">Loading...</div>;
   }
+
   const handleToggleFavorite = async (botId: string) => {
     const userId = user?.id;
     if (!userId) {
@@ -76,91 +67,46 @@ const CharacterSelectionPage = () => {
       return;
     }
 
-    if (favorites.includes(botId)) {
-      // Remove from favorites
-      setFavorites(favorites.filter((id) => id !== botId));
+    // Find the bot in the current data
+    const botIndex = data?.bots.findIndex(bot => bot.id === botId);
+    if (botIndex === -1) return;
 
-      await axios.post(`http://127.0.0.1:8000/bots/remove-favourite`, {
-        botId,
-        userId,
-      });
-    } else {
-      // Add to favorites
-      setFavorites([...favorites, botId]);
-      try {
+    const currentFavoriteStatus = data.bots[botIndex].favorite;
+
+    // Optimistically update the UI
+    data.bots[botIndex].favorite = !currentFavoriteStatus;
+
+    try {
+      if (currentFavoriteStatus) {
+        // Remove from favorites
+        await axios.post(`http://127.0.0.1:8000/bots/remove-favourite`, {
+          botId,
+          userId,
+        });
+      } else {
+        // Add to favorites
         await axios.post(`http://127.0.0.1:8000/bots/add-favourite`, {
           botId,
           userId,
         });
-      } catch (error) {
-        console.error("Failed to update favorite", error);
       }
+    } catch (error) {
+      console.error("Failed to update favorite", error);
+      // Revert the optimistic update on error
+      data.bots[botIndex].favorite = currentFavoriteStatus;
     }
   };
 
-  // // Placeholder data - replace with actual character data in a real application
-  // const characters = [
-  //   {
-  //     id: 1,
-  //     name: "Friendly Assistant",
-  //     category: "General",
-  //     description: "A helpful AI for everyday tasks.",
-  //     image: "/api/placeholder/300/200",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Creative Writer",
-  //     category: "Creative",
-  //     description: "An AI to help with writing and brainstorming.",
-  //     image: "/api/placeholder/300/200",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Code Helper",
-  //     category: "Technical",
-  //     description: "Assists with programming and debugging.",
-  //     image: "/api/placeholder/300/200",
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "Language Tutor",
-  //     category: "Educational",
-  //     description: "Helps you learn new languages.",
-  //     image: "/api/placeholder/300/200",
-  //   },
-  //   {
-  //     id: 5,
-  //     name: "Fitness Coach",
-  //     category: "Health",
-  //     description: "Provides workout plans and nutrition advice.",
-  //     image: "/api/placeholder/300/200",
-  //   },
-  //   {
-  //     id: 6,
-  //     name: "Travel Planner",
-  //     category: "Lifestyle",
-  //     description: "Helps plan your perfect vacation.",
-  //     image: "/api/placeholder/300/200",
-  //   },
-  // ];
+  // Filter bots based on search term and favorite filter
+  const filteredBots = data?.bots.filter(bot => {
+    const matchesSearch = bot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         bot.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesFavoriteFilter = showFavoritesOnly ? bot.favorite : true;
+    
+    return matchesSearch && matchesFavoriteFilter;
+  }) || [];
 
-  // const categories = [
-  //   "All",
-  //   "General",
-  //   "Creative",
-  //   "Technical",
-  //   "Educational",
-  //   "Health",
-  //   "Lifestyle",
-  // ];
-
-  // const filteredCharacters = characters.filter(
-  //   (char) =>
-  //     (selectedCategory === "All" || char.category === selectedCategory) &&
-  //     char.name.toLowerCase().includes(searchTerm.toLowerCase())
-  // );
-
-  // // If a character is selected, render the MainContent component instead
   if (selectedCharacter) {
     return <MainContent selectedCharacter={selectedCharacter} />;
   }
@@ -189,35 +135,68 @@ const CharacterSelectionPage = () => {
               size={20}
             />
           </div>
-          {/* <div className="flex items-center">
-            <Filter className="mr-2 text-gray-400" size={20} />
-            <select
-              className="border rounded-lg px-4 py-2 text-gray-900"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+          
+          {/* Favorites Filter Toggle */}
+          <div className="flex items-center">
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`flex items-center px-4 py-2 rounded-lg transition duration-300 ${
+                showFavoritesOnly 
+                  ? 'bg-red-500 text-white' 
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
             >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div> */}
+              <Heart 
+                size={20} 
+                className={`mr-2 ${showFavoritesOnly ? 'fill-current' : ''}`}
+              />
+              {showFavoritesOnly ? 'Show All' : 'Show Favorites'}
+            </button>
+          </div>
+        </div>
+
+        {/* Show count and filter status */}
+        <div className="mb-4 text-gray-400">
+          {showFavoritesOnly && (
+            <p>Showing {filteredBots.length} favorite bot{filteredBots.length !== 1 ? 's' : ''}</p>
+          )}
+          {!showFavoritesOnly && searchTerm && (
+            <p>Found {filteredBots.length} bot{filteredBots.length !== 1 ? 's' : ''} matching "{searchTerm}"</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {data?.bots.map((char) => (
+          {filteredBots.map((char) => (
             <CharacterCard
               key={char.id}
               name={char.name}
               description={char.description}
               image={char.avatar}
               onSelect={() => setSelectedCharacter(char)}
-              isFavorite={favorites.includes(char.id)}
+              isFavorite={char.favorite}
               onToggleFavorite={() => handleToggleFavorite(char.id)}
             />
           ))}
         </div>
+
+        {/* Show message when no bots match the filter */}
+        {filteredBots.length === 0 && (
+          <div className="text-center text-gray-400 py-12">
+            {showFavoritesOnly ? (
+              <div>
+                <Heart size={48} className="mx-auto mb-4 text-gray-600" />
+                <p className="text-lg">No favorite bots yet</p>
+                <p className="text-sm">Click the heart icon on any bot to add it to your favorites!</p>
+              </div>
+            ) : (
+              <div>
+                <Search size={48} className="mx-auto mb-4 text-gray-600" />
+                <p className="text-lg">No bots found matching "{searchTerm}"</p>
+                <p className="text-sm">Try adjusting your search terms</p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="text-center">
           <button className="bg-green-500 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-green-600 transition duration-300 flex items-center justify-center mx-auto">
@@ -229,4 +208,5 @@ const CharacterSelectionPage = () => {
     </div>
   );
 };
+
 export default CharacterSelectionPage;
