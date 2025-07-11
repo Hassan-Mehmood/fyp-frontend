@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal } from "lucide-react";
+import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X } from "lucide-react";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
@@ -33,7 +33,9 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useUser();
   
   const { data: messageHistory } = useQuery({
@@ -52,11 +54,23 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
     // refetchInterval: 10000,
   });
   
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const isLoading = false; 
 
   const handleSendMessage = async () => {
-    if (inputMessage.trim()) {
+    if (inputMessage.trim() || selectedFile) {
       const userMessage: Message = {
         id: Date.now(),
         content: inputMessage,
@@ -68,17 +82,33 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
       setInputMessage("");
       setIsTyping(true);
 
+
+      // Backend endpoint
+    //   async def root(
+    //     message: str = Form(...),
+    //     model: str = Form(...),
+    //     user_id: str = Form(...),
+    //     bot_id: str = Form(...),
+    //     chat_history: str = Form("[]"),
+    //     file: Optional[UploadFile] = File(None),
+    // ):
+
       try {
-        const response = await axios.post("http://127.0.0.1:8000/chat", {
-          message: inputMessage,
-          model: selectedModel.id,
-          user_id: user?.id,
-          bot_id: selectedCharacter?.id,
-          chat_history: updatedMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        });
+        const formData = new FormData();
+        formData.append("message", inputMessage);
+        formData.append("model", selectedModel.id);
+        formData.append("user_id", user?.id || "");
+        formData.append("bot_id", selectedCharacter?.id.toString() || "");
+        formData.append("chat_history", JSON.stringify(updatedMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))));
+        if (selectedFile) {
+          formData.append("file", selectedFile);
+          console.log("File appended:", selectedFile.name);
+        }
+        
+        const response = await axios.post("http://127.0.0.1:8000/chat", formData);
 
         const botResponse: Message = {
           id: Date.now() + 1,
@@ -99,6 +129,10 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
         ]);
       } finally {
         setIsTyping(false);
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
       
     }
@@ -295,11 +329,31 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
       {/* Input Area */}
       <div className="bg-gray-800 border-t border-gray-700 px-6 py-4">
         <div className="flex items-end space-x-3">
-          <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-            <Plus className="w-5 h-5 text-gray-400" />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*,.pdf,.txt,.md"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <Paperclip className="w-5 h-5 text-gray-400" />
           </button>
           
           <div className="flex-1 relative">
+            {selectedFile && (
+              <div className="absolute bottom-full left-0 w-full mb-2">
+                <div className="flex items-center justify-between bg-gray-700 text-white text-sm rounded-md px-3 py-1">
+                  <span>{selectedFile.name}</span>
+                  <button onClick={handleRemoveFile} className="p-1 hover:bg-gray-600 rounded-full">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={inputMessage}
@@ -322,9 +376,9 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
           
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim()}
+            disabled={!inputMessage.trim() && !selectedFile}
             className={`p-2 rounded-lg transition-all ${
-              inputMessage.trim()
+              inputMessage.trim() || selectedFile
                 ? "bg-purple-600 hover:bg-purple-700 text-white"
                 : "bg-gray-700 text-gray-500 cursor-not-allowed"
             }`}
