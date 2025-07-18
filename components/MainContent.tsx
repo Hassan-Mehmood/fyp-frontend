@@ -9,6 +9,7 @@ type Message = {
   id: number;
   content: string;
   role: "user" | "assistant";
+  file_path?: string | null;
 };
 
 const MODELS = [
@@ -102,6 +103,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
         formData.append("chat_history", JSON.stringify(updatedMessages.map((m) => ({
           role: m.role,
           content: m.content,
+          file_path: m.file_path || null,
         }))));
         if (selectedFile) {
           formData.append("file", selectedFile);
