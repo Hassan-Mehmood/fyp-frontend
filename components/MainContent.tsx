@@ -469,11 +469,11 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
             return msg;
           }));
         }
-
         const botResponse: Message = {
           id: Date.now() + 1,
           content: response.data.content,
           role: "assistant",
+          file_path: response.data.file_path || null,
         };
 
         setMessages((prev) => [...prev, botResponse]);

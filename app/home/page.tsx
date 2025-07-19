@@ -1,4 +1,5 @@
-import React from 'react';
+"use client";
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bot, PlusCircle, CreditCard, MessageSquare, ArrowRight, Sparkles, Users, Zap } from 'lucide-react';
 import {
@@ -7,7 +8,9 @@ import {
   SignedIn,
   SignedOut,
   UserButton,
+  useUser,
 } from '@clerk/nextjs';
+import axios from 'axios';
 
 const FeatureCard = ({ icon, title, description, href, gradient = false }) => (
   <Link href={href} className="h-full flex">
@@ -47,17 +50,94 @@ const FeatureCard = ({ icon, title, description, href, gradient = false }) => (
 
 );
 
-const StatCard = ({ number, label, icon }) => (
+const StatCard = ({ number, label, icon, loading = false }) => (
   <div className="text-center">
     <div className="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg mx-auto mb-3">
       {icon}
     </div>
-    <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{number}</div>
+    <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+      {loading ? (
+        <div className="animate-pulse bg-gray-300 dark:bg-gray-600 h-8 w-16 rounded mx-auto"></div>
+      ) : (
+        number
+      )}
+    </div>
     <div className="text-sm text-gray-600 dark:text-gray-400">{label}</div>
   </div>
 );
 
 const HomePage = () => {
+  const { user, isLoaded } = useUser();
+ const [creditsData, setCreditsData] = useState({
+  credits: 0,
+  totalCredits: 0,
+  bots: 0,
+  loading: true,
+  error: null
+});
+  const [conversationCount, setConversationCount] = useState(0);
+
+  // Fetch credits data
+useEffect(() => {
+  const fetchCreditsData = async () => {
+    if (!isLoaded || !user?.id) return;
+
+    try {
+      setCreditsData(prev => ({ ...prev, loading: true, error: null }));
+
+      const response = await axios.get(`http://127.0.0.1:8000/aggregate/${user.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = response.data;
+
+      setCreditsData({
+      credits: data.total_credits || 0,
+      totalCredits: data.total_credits || 0,
+      bots: data.bots || 0,
+      loading: false,
+      error: null,
+    });
+
+    } catch (error) {
+      console.error('Error fetching credits data:', error);
+      setCreditsData(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Failed to load credits',
+      }));
+    }
+  };
+
+  fetchCreditsData();
+}, [user?.id, isLoaded]);
+
+
+  useEffect(() => {
+    const fetchConversationCount = async () => {
+      if (!isLoaded || !user?.id) {
+        return;
+      }
+
+      try {
+        // Replace with your actual conversation count API endpoint
+        // const response = await fetch(`/api/conversations/count/${user.id}`);
+        // const data = await response.json();
+        // setConversationCount(data.count || 0);
+        
+        // For now, keeping it as 0 since the API endpoint isn't specified
+        setConversationCount(0);
+      } catch (error) {
+        console.error('Error fetching conversation count:', error);
+        setConversationCount(0);
+      }
+    };
+
+    fetchConversationCount();
+  }, [user?.id, isLoaded]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 ml-64">
       {/* Header */}
@@ -125,72 +205,93 @@ const HomePage = () => {
         {/* Stats */}
         <section className="mb-12">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            {creditsData.error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-red-600 dark:text-red-400 text-sm">{creditsData.error}</p>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <StatCard 
-                number="10+" 
-                label="Available Characters" 
-                icon={<Users size={20} />} 
-              />
+              number={creditsData.loading ? '' : creditsData.bots.toString()} 
+              label="Available Characters" 
+              icon={<Users size={20} />} 
+              loading={creditsData.loading}
+            />
               <StatCard 
-                number="100" 
-                label="Credits Available" 
+                number={creditsData.loading ? '' : creditsData.credits.toString()} 
+                label="Available Credits" 
                 icon={<CreditCard size={20} />} 
-              />
-              <StatCard 
-                number="0" 
-                label="Conversations Started" 
-                icon={<MessageSquare size={20} />} 
+                loading={creditsData.loading}
               />
             </div>
+            
+            {/* Additional Credits Info */}
+            <SignedIn>
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Total Credits Earned: 
+                    <span className="font-semibold text-gray-900 dark:text-white ml-2">
+                      {creditsData.loading ? '...' : creditsData.totalCredits}
+                    </span>
+                  </span>
+                  <Link 
+                    href="/credits" 
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                  >
+                    Manage Credits →
+                  </Link>
+                </div>
+              </div>
+            </SignedIn>
           </div>
         </section>
 
         {/* Features Grid */}
         <section className="mb-12">
-  <div className="flex items-center justify-between mb-6">
-    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Key Features</h2>
-    <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-      <Sparkles size={16} className="mr-1" />
-      Powered by AI
-    </div>
-  </div>
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <div className="h-full flex">
-      <FeatureCard
-        icon={<Bot size={24} />}
-        title="Role-Based Characters"
-        description="Choose from a variety of pre-configured characters with unique personalities"
-        href="/character-selection"
-      />
-    </div>
-    <div className="h-full flex">
-      <FeatureCard
-        icon={<PlusCircle size={24} />}
-        title="Custom Bot Creation"
-        description="Design and personalize your own AI companions with custom traits"
-        href="/custom-bot"
-        gradient={true}
-      />
-    </div>
-    <div className="h-full flex">
-      <FeatureCard
-        icon={<CreditCard size={24} />}
-        title="Flexible Credits"
-        description="Access premium features with our transparent credit system"
-        href="/credits"
-      />
-    </div>
-    <div className="h-full flex">
-      <FeatureCard
-        icon={<MessageSquare size={24} />}
-        title="Smart Conversations"
-        description="Enjoy context-aware chats that remember your preferences"
-        href="/chat-history"
-      />
-    </div>
-  </div>
-</section>
-
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Key Features</h2>
+            <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
+              <Sparkles size={16} className="mr-1" />
+              Powered by AI
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="h-full flex">
+              <FeatureCard
+                icon={<Bot size={24} />}
+                title="Role-Based Characters"
+                description="Choose from a variety of pre-configured characters with unique personalities"
+                href="/character-selection"
+              />
+            </div>
+            <div className="h-full flex">
+              <FeatureCard
+                icon={<PlusCircle size={24} />}
+                title="Custom Bot Creation"
+                description="Design and personalize your own AI companions with custom traits"
+                href="/custom-bot"
+                gradient={true}
+              />
+            </div>
+            <div className="h-full flex">
+              <FeatureCard
+                icon={<CreditCard size={24} />}
+                title="Flexible Credits"
+                description="Access premium features with our transparent credit system"
+                href="/credits"
+              />
+            </div>
+            <div className="h-full flex">
+              <FeatureCard
+                icon={<MessageSquare size={24} />}
+                title="Smart Conversations"
+                description="Enjoy context-aware chats that remember your preferences"
+                href="/chat-history"
+              />
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );

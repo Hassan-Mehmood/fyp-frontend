@@ -1,69 +1,92 @@
 "use client";
 import { useUser } from "@clerk/nextjs";
-import React, { useState } from "react";
-
+import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
+import axios from "axios";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
 
-const CreditPackage = ({ amount, price, onPurchase }) => (
+// Types for better TypeScript support
+interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  credits: number;
+  type: 'purchase' | 'usage';
+}
+
+interface UserCredits {
+  credits: number;
+  transactions?: Transaction[];
+}
+
+const CreditPackage = ({ 
+  amount, 
+  price, 
+  onPurchase, 
+  isLoading 
+}: { 
+  amount: number; 
+  price: number; 
+  onPurchase: () => void; 
+  isLoading: boolean;
+}) => (
   <div className="bg-gray-800 rounded-lg p-6 text-white">
     <h3 className="text-xl font-bold mb-2">{amount} Credits</h3>
     <p className="text-2xl font-bold mb-4">${price}</p>
     <button
       onClick={onPurchase}
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+      disabled={isLoading}
+      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded transition duration-300"
     >
-      Purchase
+      {isLoading ? 'Processing...' : 'Purchase'}
     </button>
   </div>
 );
 
-const TransactionHistory = () => {
-  const transactions = [
-    {
-      date: "2024-09-25",
-      description: "Credit Purchase",
-      amount: 500,
-      credits: 500,
-    },
-    {
-      date: "2024-09-20",
-      description: "Used for Premium Bot",
-      amount: -50,
-      credits: -50,
-    },
-    {
-      date: "2024-09-15",
-      description: "Credit Purchase",
-      amount: 100,
-      credits: 100,
-    },
-  ];
+const TransactionHistory = ({ transactions, isLoading }: { transactions: Transaction[]; isLoading: boolean }) => {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-32">
+        <div className="text-white">Loading transactions...</div>
+      </div>
+    );
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-6 text-center text-gray-400">
+        No transactions found
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full bg-gray-800 text-white">
+      <table className="min-w-full bg-gray-800 text-white rounded-lg">
         <thead>
           <tr className="bg-gray-700">
-            <th className="px-4 py-2 text-left">Date</th>
-            <th className="px-4 py-2 text-left">Description</th>
-            <th className="px-4 py-2 text-left">Amount ($)</th>
-            <th className="px-4 py-2 text-left">Credits</th>
+            <th className="px-4 py-3 text-left">Date</th>
+            <th className="px-4 py-3 text-left">Description</th>
+            <th className="px-4 py-3 text-left">Amount ($)</th>
+            <th className="px-4 py-3 text-left">Credits</th>
           </tr>
         </thead>
         <tbody>
-          {transactions.map((transaction, index) => (
-            <tr key={index} className="border-b border-gray-700">
-              <td className="px-4 py-2">{transaction.date}</td>
-              <td className="px-4 py-2">{transaction.description}</td>
-              <td className="px-4 py-2">
+          {transactions.map((transaction) => (
+            <tr key={transaction.id} className="border-b border-gray-700">
+              <td className="px-4 py-3">
+                {new Date(transaction.date).toLocaleDateString()}
+              </td>
+              <td className="px-4 py-3">{transaction.description}</td>
+              <td className="px-4 py-3">
                 {transaction.amount > 0
-                  ? `+$${transaction.amount}`
-                  : `-$${Math.abs(transaction.amount)}`}
+                  ? `+$${transaction.amount.toFixed(2)}`
+                  : `-$${Math.abs(transaction.amount).toFixed(2)}`}
               </td>
               <td
-                className={`px-4 py-2 ${
+                className={`px-4 py-3 ${
                   transaction.credits > 0 ? "text-green-500" : "text-red-500"
                 }`}
               >
@@ -80,62 +103,169 @@ const TransactionHistory = () => {
 };
 
 const CreditsPage = () => {
-  const [currentCredits, setCurrentCredits] = useState(0);
+  const [currentCredits, setCurrentCredits] = useState<number>(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState("buy");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { user } = useUser();
   const user_id = user?.id;
 
-  const handlePurchase = (amount: number) => {
-    console.log("handlePurchase called with amount:", amount);
-    // call your API here, e.g.:
-    fetch("http://127.0.0.1:8000/stripe/create-checkout-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ amount, user_id }),
-    })
-      .then((res) => res.json())
-      .then(async ({ session_id }) => {
-        const stripe = await stripePromise;
+  const API_BASE_URL = "http://127.0.0.1:8000";
 
-        if (!stripe) {
-          console.error("Stripe.js has not loaded properly.");
-          return;
-        }
-
-        await stripe.redirectToCheckout({ sessionId: session_id });
+  const fetchUserCredits = async () => {
+    if (!user_id) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await axios.get(`${API_BASE_URL}/users/credits/${user_id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-    setCurrentCredits((prev) => prev + amount);
-    // Optionally, you can also log the transaction
-    console.log(
-      `Purchased ${amount} credits. New balance: ${currentCredits + amount}`
-    );
+
+      const data: UserCredits = await response.data;
+     setCurrentCredits(data.credits);
+
+      setTransactions(data.transactions || []);
+    } catch (error) {
+      console.error('Error fetching user credits:', error);
+      setError('Failed to load credits. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (user_id) {
+      fetchUserCredits();
+    }
+  }, [user_id]);
+
+  const handlePaymentSuccess = async (amount: number) => {
+    try {
+      await fetchUserCredits();
+      
+      // Optionally show a success message
+      console.log(`Successfully purchased ${amount} credits!`);
+    } catch (error) {
+      console.error('Error refreshing credits after payment:', error);
+    }
+  };
+
+  const handlePurchase = async (creditAmount: number, price: number) => {
+    if (!user_id) {
+      setError('Please log in to purchase credits');
+      return;
+    }
+
+    try {
+      setIsPurchasing(true);
+      setError(null);
+      
+      console.log("Creating checkout session for:", { creditAmount, price, user_id });
+
+      const response = await fetch(`${API_BASE_URL}/stripe/create-checkout-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          amount: creditAmount, 
+          price: price,
+          user_id 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create checkout session: ${response.status}`);
+      }
+
+      const { session_id } = await response.json();
+      
+      if (!session_id) {
+        throw new Error('No session ID returned from server');
+      }
+
+      const stripe = await stripePromise;
+      
+      if (!stripe) {
+        throw new Error("Stripe.js has not loaded properly.");
+      }
+
+      const { error } = await stripe.redirectToCheckout({ sessionId: session_id });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+    } catch (error) {
+      console.error('Error during purchase:', error);
+      setError(error instanceof Error ? error.message : 'Purchase failed. Please try again.');
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const refreshCredits = async () => {
+    await fetchUserCredits();
+  };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-gray-800 rounded-lg p-6 text-center text-white">
+          Please log in to view your credits.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-white mb-6">Credits</h1>
 
+      {error && (
+        <div className="bg-red-600 text-white p-4 rounded-lg mb-6">
+          {error}
+          <button 
+            onClick={() => setError(null)} 
+            className="ml-2 underline hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Current Balance Card */}
       <div className="bg-gray-800 rounded-lg p-6 mb-6">
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm text-gray-400">Current Balance</p>
             <p className="text-3xl font-bold text-white">
-              {currentCredits} Credits
+              {isLoading ? 'Loading...' : `${currentCredits} Credits`}
             </p>
           </div>
-          <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300">
-            Top Up
+          <button 
+            onClick={refreshCredits}
+            disabled={isLoading}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded transition duration-300"
+          >
+            {isLoading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
 
+      {/* Tab Navigation */}
       <div className="mb-6">
         <div className="flex border-b border-gray-700">
           <button
-            className={`py-2 px-4 font-semibold ${
+            className={`py-2 px-4 font-semibold transition-colors ${
               activeTab === "buy"
                 ? "text-blue-500 border-b-2 border-blue-500"
                 : "text-gray-400 hover:text-white"
@@ -145,7 +275,7 @@ const CreditsPage = () => {
             Buy Credits
           </button>
           <button
-            className={`py-2 px-4 font-semibold ${
+            className={`py-2 px-4 font-semibold transition-colors ${
               activeTab === "history"
                 ? "text-blue-500 border-b-2 border-blue-500"
                 : "text-gray-400 hover:text-white"
@@ -157,26 +287,30 @@ const CreditsPage = () => {
         </div>
       </div>
 
+      {/* Tab Content */}
       {activeTab === "buy" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <CreditPackage
             amount={100}
             price={2.5}
-            onPurchase={() => handlePurchase(100)}
+            onPurchase={() => handlePurchase(100, 2.5)}
+            isLoading={isPurchasing}
           />
           <CreditPackage
             amount={500}
             price={5.0}
-            onPurchase={() => handlePurchase(500)}
+            onPurchase={() => handlePurchase(500, 5.0)}
+            isLoading={isPurchasing}
           />
           <CreditPackage
             amount={1000}
             price={10.0}
-            onPurchase={() => handlePurchase(1000)}
+            onPurchase={() => handlePurchase(1000, 10.0)}
+            isLoading={isPurchasing}
           />
         </div>
       ) : (
-        <TransactionHistory />
+        <TransactionHistory transactions={transactions} isLoading={isLoading} />
       )}
     </div>
   );
