@@ -129,10 +129,27 @@ const CreditsPage = () => {
         },
       });
 
+       const transactionsResponse = await axios.get(`${API_BASE_URL}/users/transaction-history/${user_id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
       const data: UserCredits = await response.data;
+      const transactionsDataRaw = transactionsResponse.data.transaction_history;
+
+const transactionsData: Transaction[] = transactionsDataRaw.map((txn: any) => ({
+  id: txn.id,
+  date: txn.date,
+  description: txn.type === 'PURCHASE' ? 'Credit Purchase' : 'Usage',
+  amount: txn.amount,
+  credits: txn.type === 'PURCHASE' ? txn.amount : -txn.amount,
+  type: txn.type.toLowerCase(), // 'purchase' | 'usage'
+}));
+
      setCurrentCredits(data.credits);
 
-      setTransactions(data.transactions || []);
+      setTransactions(transactionsData);
     } catch (error) {
       console.error('Error fetching user credits:', error);
       setError('Failed to load credits. Please try again.');
