@@ -1,12 +1,12 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X, FileText, Download, Eye } from "lucide-react";
+import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X, FileText, Download, Eye, File, Image } from "lucide-react";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 
 type Message = {
-  id: number;
+  id: string | number;
   content: string;
   role: "user" | "assistant";
   file_path?: string | null;
@@ -31,79 +31,248 @@ const MODELS = [
   { id: "gemini-2.5-pro", name: "Gemini-2.5-Pro", provider: "Google", color: "bg-yellow-500" },
 ];
 
-const ImageDisplay = ({ filePath, fileName }: { filePath: string; fileName: string }) => {
+const getFileTypeFromUrl = (url: string, fileName?: string): string => {
+  const lowerUrl = url.toLowerCase();
+  const lowerFileName = fileName?.toLowerCase() || '';
+  
+  if (lowerUrl.includes('.pdf') || lowerFileName.includes('.pdf')) return 'application/pdf';
+  if (lowerUrl.includes('.png') || lowerFileName.includes('.png')) return 'image/png';
+  if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg') || lowerFileName.includes('.jpg') || lowerFileName.includes('.jpeg')) return 'image/jpeg';
+  if (lowerUrl.includes('.gif') || lowerFileName.includes('.gif')) return 'image/gif';
+  if (lowerUrl.includes('.webp') || lowerFileName.includes('.webp')) return 'image/webp';
+  if (lowerUrl.includes('.svg') || lowerFileName.includes('.svg')) return 'image/svg+xml';
+  if (lowerUrl.includes('.doc') || lowerUrl.includes('.docx') || lowerFileName.includes('.doc') || lowerFileName.includes('.docx')) return 'application/msword';
+  if (lowerUrl.includes('.txt') || lowerFileName.includes('.txt')) return 'text/plain';
+  if (lowerUrl.includes('.md') || lowerFileName.includes('.md')) return 'text/markdown';
+  
+  return 'application/octet-stream';
+};
+
+const getFileNameFromUrl = (url: string): string => {
+  try {
+    const urlParts = url.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    const cleanFileName = fileName.split('?')[0];
+    return decodeURIComponent(cleanFileName);
+  } catch {
+    return 'Unknown file';
+  }
+};
+
+const downloadFile = async (filePath: string, fileName: string) => {
+  try {
+    if (filePath.startsWith('blob:')) {
+      const link = document.createElement('a');
+      link.href = filePath;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    const response = await fetch(filePath);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Download failed:', error);
+    window.open(filePath, '_blank');
+  }
+};
+
+const ImageDisplay = ({ filePath, fileName, fileType }: { filePath: string; fileName: string; fileType?: string }) => {
   const [imageError, setImageError] = useState(false);
   
+  const handleDownload = () => {
+    downloadFile(filePath, fileName);
+  };
+
   if (imageError) {
     return (
-      <div className="flex items-center space-x-2 bg-gray-600 rounded-lg p-3 mt-2">
-        <FileText className="w-4 h-4 text-gray-400" />
-        <span className="text-sm text-gray-300">{fileName}</span>
-        <span className="text-xs text-red-400">(Preview unavailable)</span>
+      <div className="flex items-center space-x-3 bg-gray-600 rounded-lg p-3 mt-2 border border-gray-500">
+        <div className="p-2 bg-gray-500 rounded-lg">
+          <Image className="w-6 h-6 text-gray-300" />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-medium text-white">{fileName}</div>
+          <div className="text-xs text-red-400">Image preview unavailable</div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => window.open(filePath, '_blank')}
+            className="p-1.5 hover:bg-gray-500 rounded transition-colors"
+            title="View image"
+          >
+            <Eye className="w-4 h-4 text-gray-300" />
+          </button>
+          <button
+            onClick={handleDownload}
+            className="p-1.5 hover:bg-gray-500 rounded transition-colors"
+            title="Download image"
+          >
+            <Download className="w-4 h-4 text-gray-300" />
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="mt-2">
-      <img
-        src={filePath}
-        alt={fileName}
-        className="max-w-full max-h-64 rounded-lg object-contain bg-gray-800"
-        onError={() => setImageError(true)}
-        loading="lazy"
-      />
-      <div className="text-xs text-gray-400 mt-1">{fileName}</div>
+      <div className="relative group">
+        <img
+          src={filePath}
+          alt={fileName}
+          className="max-w-full max-h-64 rounded-lg object-contain bg-gray-800 border border-gray-600"
+          onError={() => setImageError(true)}
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => window.open(filePath, '_blank')}
+              className="p-2 bg-gray-800 bg-opacity-75 hover:bg-opacity-100 rounded-lg transition-all"
+              title="View full size"
+            >
+              <Eye className="w-4 h-4 text-white" />
+            </button>
+            <button
+              onClick={handleDownload}
+              className="p-2 bg-gray-800 bg-opacity-75 hover:bg-opacity-100 rounded-lg transition-all"
+              title="Download image"
+            >
+              <Download className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="text-xs text-gray-400 mt-1 flex items-center space-x-2">
+        <Image className="w-3 h-3" />
+        <span>{fileName}</span>
+      </div>
+    </div>
+  );
+};
+
+const PDFDisplay = ({ filePath, fileName }: { filePath: string; fileName: string }) => {
+  const handleDownload = () => {
+    downloadFile(filePath, fileName);
+  };
+
+  return (
+    <div className="mt-2 bg-gray-600 rounded-lg border border-gray-500 overflow-hidden">
+      <div className="flex items-center justify-between p-3 bg-gray-700 border-b border-gray-500">
+        <div className="flex items-center space-x-3">
+          <div className="bg-red-500 rounded-lg p-2 flex items-center justify-center">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-white truncate">{fileName}</div>
+            <div className="text-xs text-gray-300 flex items-center space-x-2">
+              <span className="px-2 py-0.5 bg-red-500 rounded text-xs font-medium text-white">
+                PDF
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center space-x-1 ml-3">
+          <button
+            onClick={() => window.open(filePath, '_blank')}
+            className="p-1.5 hover:bg-gray-500 rounded-lg transition-colors"
+            title="Open PDF in new tab"
+          >
+            <Eye className="w-4 h-4 text-gray-300" />
+          </button>
+          <button
+            onClick={handleDownload}
+            className="p-1.5 hover:bg-gray-500 rounded-lg transition-colors"
+            title="Download PDF"
+          >
+            <Download className="w-4 h-4 text-gray-300" />
+          </button>
+        </div>
+      </div>
+      
+      <div className="h-64 bg-gray-800">
+        <iframe
+          src={`${filePath}#view=FitH`}
+          className="w-full h-full border-0"
+          title={fileName}
+          onError={(e) => {
+            console.error('PDF iframe error:', e);
+            (e.target as HTMLIFrameElement).style.display = 'none';
+          }}
+        />
+      </div>
     </div>
   );
 };
 
 const DocumentDisplay = ({ filePath, fileName, fileType }: { filePath: string; fileName: string; fileType: string }) => {
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const getFileIcon = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('pdf')) return { icon: <FileText className="w-5 h-5 text-white" />, color: 'bg-red-500', name: 'PDF' };
+    if (lowerType.includes('doc')) return { icon: <FileText className="w-5 h-5 text-white" />, color: 'bg-blue-500', name: 'DOC' };
+    if (lowerType.includes('text') || lowerType.includes('txt')) return { icon: <FileText className="w-5 h-5 text-white" />, color: 'bg-gray-500', name: 'TXT' };
+    if (lowerType.includes('markdown') || lowerType.includes('md')) return { icon: <FileText className="w-5 h-5 text-white" />, color: 'bg-purple-500', name: 'MD' };
+    return { icon: <FileText className="w-5 h-5 text-white" />, color: 'bg-gray-500', name: 'FILE' };
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('pdf')) return '📄';
-    if (type.includes('text')) return '📝';
-    if (type.includes('doc')) return '📄';
-    return '📎';
-  };
+  const fileInfo = getFileIcon(fileType);
 
   return (
-    <div className="mt-2 bg-gray-600 rounded-lg p-3 border border-gray-500">
+    <div className="mt-2 bg-gray-600 rounded-lg p-4 border border-gray-500 hover:bg-gray-550 transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="text-2xl">{getFileIcon(fileType)}</div>
-          <div>
-            <div className="text-sm font-medium text-white">{fileName}</div>
-            <div className="text-xs text-gray-400">{fileType}</div>
+          <div className={`${fileInfo.color} rounded-lg p-2 flex items-center justify-center`}>
+            {fileInfo.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-white truncate">{fileName}</div>
+            <div className="text-xs text-gray-300 flex items-center space-x-2">
+              <span className="px-2 py-0.5 bg-gray-700 rounded text-xs font-medium">
+                {fileInfo.name}
+              </span>
+              {fileType.includes('pdf') && (
+                <button 
+                  onClick={() => window.open(filePath, '_blank')}
+                  className="text-xs text-purple-400 hover:text-purple-300"
+                >
+                  View PDF
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          {filePath && (
-            <>
-              <button
-                onClick={() => window.open(filePath, '_blank')}
-                className="p-1.5 hover:bg-gray-500 rounded transition-colors"
-                title="View file"
-              >
-                <Eye className="w-4 h-4 text-gray-300" />
-              </button>
-              <a
-                href={filePath}
-                download={fileName}
-                className="p-1.5 hover:bg-gray-500 rounded transition-colors"
-                title="Download file"
-              >
-                <Download className="w-4 h-4 text-gray-300" />
-              </a>
-            </>
-          )}
+        <div className="flex items-center space-x-1 ml-3">
+          <button
+            onClick={() => window.open(filePath, '_blank')}
+            className="p-1.5 hover:bg-gray-500 rounded-lg transition-colors"
+            title="View document"
+          >
+            <Eye className="w-4 h-4 text-gray-300" />
+          </button>
+          <a
+            href={filePath}
+            download={fileName}
+            className="p-1.5 hover:bg-gray-500 rounded-lg transition-colors"
+            title="Download document"
+          >
+            <Download className="w-4 h-4 text-gray-300" />
+          </a>
         </div>
       </div>
     </div>
@@ -129,31 +298,45 @@ const FilePreview = ({ file, onRemove }: { file: File; onRemove: () => void }) =
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getFileIcon = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('pdf')) return { icon: '📄', color: 'bg-red-500' };
+    if (lowerType.includes('doc')) return { icon: '📘', color: 'bg-blue-500' };
+    if (lowerType.includes('text')) return { icon: '📝', color: 'bg-gray-500' };
+    return { icon: '📎', color: 'bg-gray-500' };
+  };
+
+  const fileInfo = getFileIcon(file.type);
+
   return (
     <div className="absolute bottom-full left-0 w-full mb-2">
-      <div className="bg-gray-700 rounded-lg p-3 border border-gray-600">
+      <div className="bg-gray-700 rounded-lg p-3 border border-gray-600 shadow-lg">
         <div className="flex items-start justify-between space-x-3">
           <div className="flex-1">
             {previewUrl ? (
               <div className="space-y-2">
-                <img
-                  src={previewUrl}
-                  alt={file.name}
-                  className="max-w-32 max-h-20 rounded object-cover"
-                />
-                <div className="text-sm text-gray-300">{file.name}</div>
+                <div className="relative">
+                  <img
+                    src={previewUrl}
+                    alt={file.name}
+                    className="max-w-32 max-h-20 rounded object-cover border border-gray-500"
+                  />
+                  <div className="absolute top-1 right-1 bg-black bg-opacity-50 rounded px-1 py-0.5">
+                    <span className="text-xs text-white">IMG</span>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-300 truncate">{file.name}</div>
                 <div className="text-xs text-gray-400">{formatFileSize(file.size)}</div>
               </div>
             ) : (
               <div className="flex items-center space-x-3">
-                <div className="text-2xl">
-                  {file.type.includes('pdf') ? '📄' : 
-                   file.type.includes('text') ? '📝' : '📎'}
+                <div className={`${fileInfo.color} rounded-lg p-2 flex items-center justify-center`}>
+                  <FileText className="w-4 h-4 text-white" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-300">{file.name}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-gray-300 truncate">{file.name}</div>
                   <div className="text-xs text-gray-400">
-                    {file.type} • {formatFileSize(file.size)}
+                    {file.type.split('/')[1]?.toUpperCase() || 'FILE'} • {formatFileSize(file.size)}
                   </div>
                 </div>
               </div>
@@ -161,7 +344,7 @@ const FilePreview = ({ file, onRemove }: { file: File; onRemove: () => void }) =
           </div>
           <button
             onClick={onRemove}
-            className="p-1 hover:bg-gray-600 rounded-full transition-colors"
+            className="p-1 hover:bg-gray-600 rounded-full transition-colors flex-shrink-0"
           >
             <X className="w-4 h-4 text-gray-400" />
           </button>
@@ -189,7 +372,22 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
       const response = await axios.get(
         `http://127.0.0.1:8000/chat/${user.id}/${selectedCharacter.id}`
       );
-      setMessages(response.data.chat_history || []);
+      
+      const processedHistory = (response.data.chat_history || []).map((msg: Message) => {
+        if (msg.file_path && !msg.file_type) {
+          const detectedFileType = getFileTypeFromUrl(msg.file_path, msg.file_name || undefined);
+          const detectedFileName = msg.file_name || getFileNameFromUrl(msg.file_path);
+          
+          return {
+            ...msg,
+            file_type: detectedFileType,
+            file_name: detectedFileName
+          };
+        }
+        return msg;
+      });
+      
+      setMessages(processedHistory);
       return response.data;
     },
   });
@@ -300,7 +498,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
     }
   };
 
-  const handleDeleteMessage = (id: number) => {
+  const handleDeleteMessage = (id: string | number) => {
     setMessages(messages.filter((message) => message.id !== id));
   };
 
@@ -320,6 +518,41 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
 
   const isImageFile = (fileType: string) => {
     return fileType && fileType.startsWith('image/');
+  };
+
+  const isPDFFile = (fileType: string) => {
+    return fileType && fileType.includes('pdf');
+  };
+
+  const renderFileDisplay = (message: Message) => {
+    if (!message.file_path || !message.file_type) return null;
+
+    if (isImageFile(message.file_type)) {
+      return (
+        <ImageDisplay 
+          filePath={message.file_path} 
+          fileName={message.file_name || 'Image'} 
+          fileType={message.file_type}
+        />
+      );
+    }
+
+    if (isPDFFile(message.file_type)) {
+      return (
+        <PDFDisplay 
+          filePath={message.file_path} 
+          fileName={message.file_name || 'Document.pdf'} 
+        />
+      );
+    }
+
+    return (
+      <DocumentDisplay 
+        filePath={message.file_path} 
+        fileName={message.file_name || 'Document'} 
+        fileType={message.file_type}
+      />
+    );
   };
 
   useEffect(() => {
@@ -479,6 +712,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
                       <ImageDisplay 
                         filePath={message.file_path} 
                         fileName={message.file_name || 'Image'} 
+                        fileType={message.file_type}
                       />
                     ) : (
                       <DocumentDisplay 
