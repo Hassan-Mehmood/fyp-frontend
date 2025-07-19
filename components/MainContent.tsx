@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X } from "lucide-react";
+import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X, FileText, Download, Eye } from "lucide-react";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +10,9 @@ type Message = {
   content: string;
   role: "user" | "assistant";
   file_path?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
 };
 
 const MODELS = [
@@ -27,6 +30,146 @@ const MODELS = [
   { id: "gemini-2.5-flash", name: "Gemini-2.5-Flash", provider: "Google", color: "bg-yellow-400" },
   { id: "gemini-2.5-pro", name: "Gemini-2.5-Pro", provider: "Google", color: "bg-yellow-500" },
 ];
+
+const ImageDisplay = ({ filePath, fileName }: { filePath: string; fileName: string }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  if (imageError) {
+    return (
+      <div className="flex items-center space-x-2 bg-gray-600 rounded-lg p-3 mt-2">
+        <FileText className="w-4 h-4 text-gray-400" />
+        <span className="text-sm text-gray-300">{fileName}</span>
+        <span className="text-xs text-red-400">(Preview unavailable)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <img
+        src={filePath}
+        alt={fileName}
+        className="max-w-full max-h-64 rounded-lg object-contain bg-gray-800"
+        onError={() => setImageError(true)}
+        loading="lazy"
+      />
+      <div className="text-xs text-gray-400 mt-1">{fileName}</div>
+    </div>
+  );
+};
+
+const DocumentDisplay = ({ filePath, fileName, fileType }: { filePath: string; fileName: string; fileType: string }) => {
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('text')) return '📝';
+    if (type.includes('doc')) return '📄';
+    return '📎';
+  };
+
+  return (
+    <div className="mt-2 bg-gray-600 rounded-lg p-3 border border-gray-500">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="text-2xl">{getFileIcon(fileType)}</div>
+          <div>
+            <div className="text-sm font-medium text-white">{fileName}</div>
+            <div className="text-xs text-gray-400">{fileType}</div>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {filePath && (
+            <>
+              <button
+                onClick={() => window.open(filePath, '_blank')}
+                className="p-1.5 hover:bg-gray-500 rounded transition-colors"
+                title="View file"
+              >
+                <Eye className="w-4 h-4 text-gray-300" />
+              </button>
+              <a
+                href={filePath}
+                download={fileName}
+                className="p-1.5 hover:bg-gray-500 rounded transition-colors"
+                title="Download file"
+              >
+                <Download className="w-4 h-4 text-gray-300" />
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FilePreview = ({ file, onRemove }: { file: File; onRemove: () => void }) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (file && file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file]);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div className="absolute bottom-full left-0 w-full mb-2">
+      <div className="bg-gray-700 rounded-lg p-3 border border-gray-600">
+        <div className="flex items-start justify-between space-x-3">
+          <div className="flex-1">
+            {previewUrl ? (
+              <div className="space-y-2">
+                <img
+                  src={previewUrl}
+                  alt={file.name}
+                  className="max-w-32 max-h-20 rounded object-cover"
+                />
+                <div className="text-sm text-gray-300">{file.name}</div>
+                <div className="text-xs text-gray-400">{formatFileSize(file.size)}</div>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">
+                  {file.type.includes('pdf') ? '📄' : 
+                   file.type.includes('text') ? '📝' : '📎'}
+                </div>
+                <div>
+                  <div className="text-sm text-gray-300">{file.name}</div>
+                  <div className="text-xs text-gray-400">
+                    {file.type} • {formatFileSize(file.size)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={onRemove}
+            className="p-1 hover:bg-gray-600 rounded-full transition-colors"
+          >
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -49,15 +192,16 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
       setMessages(response.data.chat_history || []);
       return response.data;
     },
-    // refetchOnWindowFocus: ,
-    // refetchOnMount: false,
-    // refetchOnReconnect: false,
-    // refetchInterval: 10000,
   });
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
@@ -72,27 +216,31 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() || selectedFile) {
+      let tempFileUrl = null;
+      if (selectedFile && selectedFile.type.startsWith('image/')) {
+        tempFileUrl = URL.createObjectURL(selectedFile);
+      }
+
       const userMessage: Message = {
         id: Date.now(),
         content: inputMessage,
         role: "user",
+        file_name: selectedFile?.name || null,
+        file_type: selectedFile?.type || null,
+        file_size: selectedFile?.size || null,
+        file_path: tempFileUrl, // Use temp URL for immediate display
       };
 
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
+      
+      const currentFile = selectedFile;
       setInputMessage("");
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       setIsTyping(true);
-
-
-      // Backend endpoint
-    //   async def root(
-    //     message: str = Form(...),
-    //     model: str = Form(...),
-    //     user_id: str = Form(...),
-    //     bot_id: str = Form(...),
-    //     chat_history: str = Form("[]"),
-    //     file: Optional[UploadFile] = File(None),
-    // ):
 
       try {
         const formData = new FormData();
@@ -105,12 +253,24 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
           content: m.content,
           file_path: m.file_path || null,
         }))));
-        if (selectedFile) {
-          formData.append("file", selectedFile);
-          console.log("File appended:", selectedFile.name);
+        if (currentFile) {
+          formData.append("file", currentFile);
+          console.log("File appended:", currentFile.name);
         }
         
         const response = await axios.post("http://127.0.0.1:8000/chat", formData);
+
+        if (currentFile && response.data.file_path) {
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === userMessage.id) {
+              if (tempFileUrl) {
+                URL.revokeObjectURL(tempFileUrl);
+              }
+              return { ...msg, file_path: response.data.file_path };
+            }
+            return msg;
+          }));
+        }
 
         const botResponse: Message = {
           id: Date.now() + 1,
@@ -121,6 +281,11 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
         setMessages((prev) => [...prev, botResponse]);
       } catch (error) {
         console.error("Chat error:", error);
+        
+        if (tempFileUrl) {
+          URL.revokeObjectURL(tempFileUrl);
+        }
+        
         setMessages((prev) => [
           ...prev,
           {
@@ -131,12 +296,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
         ]);
       } finally {
         setIsTyping(false);
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
       }
-      
     }
   };
 
@@ -158,9 +318,23 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
     }
   };
 
+  const isImageFile = (fileType: string) => {
+    return fileType && fileType.startsWith('image/');
+  };
+
   useEffect(() => {
     handleResize();
   }, [inputMessage]);
+
+  useEffect(() => {
+    return () => {
+      messages.forEach(message => {
+        if (message.file_path && message.file_path.startsWith('blob:')) {
+          URL.revokeObjectURL(message.file_path);
+        }
+      });
+    };
+  }, [messages]);
 
   if (isLoading) {
     return (
@@ -293,9 +467,28 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
                       {message.role === "user" ? "You" : selectedModel.name}
                     </span>
                   </div>
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
-                  </div>
+                  
+                  {message.content && (
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {message.content}
+                    </div>
+                  )}
+                  
+                  {message.file_path && message.file_type && (
+                    isImageFile(message.file_type) ? (
+                      <ImageDisplay 
+                        filePath={message.file_path} 
+                        fileName={message.file_name || 'Image'} 
+                      />
+                    ) : (
+                      <DocumentDisplay 
+                        filePath={message.file_path} 
+                        fileName={message.file_name || 'Document'} 
+                        fileType={message.file_type}
+                      />
+                    )
+                  )}
+                  
                   <button
                     onClick={() => handleDeleteMessage(message.id)}
                     className="absolute -top-2 -right-2 w-6 h-6 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -336,7 +529,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
             ref={fileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            accept="image/*,.pdf,.txt,.md"
+            accept="image/*,.pdf,.txt,.md,.doc,.docx"
           />
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -347,14 +540,7 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
           
           <div className="flex-1 relative">
             {selectedFile && (
-              <div className="absolute bottom-full left-0 w-full mb-2">
-                <div className="flex items-center justify-between bg-gray-700 text-white text-sm rounded-md px-3 py-1">
-                  <span>{selectedFile.name}</span>
-                  <button onClick={handleRemoveFile} className="p-1 hover:bg-gray-600 rounded-full">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              <FilePreview file={selectedFile} onRemove={handleRemoveFile} />
             )}
             <textarea
               ref={textareaRef}
