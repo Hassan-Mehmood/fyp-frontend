@@ -202,57 +202,6 @@ const Sidebar = () => {
           </ul>
         </nav>
       </div>
-
-      {/* Upgrade Card */}
-      <div className="mb-4">
-        <div className="bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl p-4 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mb-3">
-              <Bot size={16} />
-            </div>
-            <h3 className="font-semibold text-sm mb-1">Bot Limit</h3>
-            <p className="text-xs text-white/80 mb-3">
-              {isSignedIn ? '5/10 Active Bots' : 'Sign in to use bots'}
-            </p>
-            <button className="w-full bg-white/20 hover:bg-white/30 transition-colors duration-200 text-white text-xs font-medium py-2 px-3 rounded-lg backdrop-blur-sm">
-              Learn more
-            </button>
-          </div>
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-4 translate-x-4"></div>
-        </div>
-      </div>
-
-      {/* Upgrade Plan Button */}
-      <button className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 mb-4 ${
-        isDarkMode 
-          ? 'bg-white text-gray-900 hover:bg-gray-100' 
-          : 'bg-gray-900 text-white hover:bg-gray-800'
-      }`}>
-        Upgrade plan
-        <ArrowUpRight size={14} className="inline ml-2" />
-      </button>
-
-      {/* Theme Toggle */}
-      <div className="flex items-center justify-center">
-        <button
-          onClick={toggleTheme}
-          className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${
-            isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
-          }`}
-        >
-          <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform duration-300 flex items-center justify-center ${
-            isDarkMode 
-              ? 'transform translate-x-6 bg-yellow-400' 
-              : 'transform translate-x-0 bg-white'
-          }`}>
-            {isDarkMode ? (
-              <Sun size={12} className="text-gray-900" />
-            ) : (
-              <Moon size={12} className="text-gray-600" />
-            )}
-          </div>
-        </button>
-      </div>
     </div>
   );
 

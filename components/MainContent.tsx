@@ -4,6 +4,7 @@ import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, P
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from 'next/navigation';
 
 type Message = {
   id: string | number;
@@ -61,6 +62,7 @@ const getFileNameFromUrl = (url: string): string => {
 
 const downloadFile = async (filePath: string, fileName: string) => {
   try {
+    // Handle blob URLs (for temporary files)
     if (filePath.startsWith('blob:')) {
       const link = document.createElement('a');
       link.href = filePath;
@@ -71,8 +73,16 @@ const downloadFile = async (filePath: string, fileName: string) => {
       return;
     }
 
-    const response = await fetch(filePath);
+    // For server files, try fetching with proper headers
+    const response = await fetch(filePath, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
+    });
+
     if (!response.ok) {
+      // If fetch fails, try opening in new window
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
@@ -85,13 +95,28 @@ const downloadFile = async (filePath: string, fileName: string) => {
     document.body.appendChild(link);
     link.click();
     
+    // Clean up
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Download failed:', error);
-    window.open(filePath, '_blank');
+    // Fallback: try opening in new window
+    try {
+      const link = document.createElement('a');
+      link.href = filePath;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (fallbackError) {
+      console.error('Fallback download also failed:', fallbackError);
+      alert('Download failed. Please try right-clicking the file and selecting "Save as..."');
+    }
   }
 };
+
+
 
 const ImageDisplay = ({ filePath, fileName, fileType }: { filePath: string; fileName: string; fileType?: string }) => {
   const [imageError, setImageError] = useState(false);
@@ -363,34 +388,98 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+    const searchParams = useSearchParams();
+  const botId = searchParams.get('bot');
+
+   const [currentBot, setCurrentBot] = useState(
+    selectedCharacter || { id: 1, name: "Assistant" }
+  );
+   useEffect(() => {
+    if (botId && botId !== currentBot.id.toString()) {
+      // Fetch bot details or use the botId to set the current bot
+      setCurrentBot({ id: parseInt(botId), name: "Assistant" }); // Update with actual bot data
+    }
+  }, [botId]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+// Add this function to scroll to bottom
+const scrollToBottom = () => {
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+};
+
+// Add this useEffect to auto-scroll when messages update
+useEffect(() => {
+  scrollToBottom();
+}, [messages, isTyping]);
+
   const { user } = useUser();
   
-  const { data: messageHistory } = useQuery({
-    queryKey: ["messageHistory", user?.id, selectedCharacter?.id],
-    queryFn: async () => {
-      if (!user?.id || !selectedCharacter?.id) return [];
+const { data: messageHistory } = useQuery({
+  queryKey: ["messageHistory", user?.id, currentBot?.id],
+  queryFn: async () => {
+    if (!user?.id || !currentBot?.id) return [];
+    
+    try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/chat/${user.id}/${selectedCharacter.id}`
+        `http://127.0.0.1:8000/chat/${user.id}/${currentBot.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.id}`, // Add auth header
+          }
+        }
       );
       
-      const processedHistory = (response.data.chat_history || []).map((msg: Message) => {
-        if (msg.file_path && !msg.file_type) {
-          const detectedFileType = getFileTypeFromUrl(msg.file_path, msg.file_name || undefined);
-          const detectedFileName = msg.file_name || getFileNameFromUrl(msg.file_path);
-          
-          return {
+      // Sort messages by created_at (assuming the backend sends this field)
+      const sortedHistory = (response.data.chat_history || [])
+        .sort((a, b) => {
+          // If created_at exists, use it; otherwise fall back to message order
+          if (a.created_at && b.created_at) {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          return 0; // Keep original order if no timestamps
+        })
+        .map((msg: Message, index: number) => {
+          // Ensure each message has a unique ID
+          const messageWithId = {
             ...msg,
-            file_type: detectedFileType,
-            file_name: detectedFileName
+            id: msg.id || `${msg.role}-${index}-${msg.created_at || Date.now()}`,
           };
+          
+          // Handle file path and type detection
+          if (messageWithId.file_path && !messageWithId.file_type) {
+            const detectedFileType = getFileTypeFromUrl(messageWithId.file_path, messageWithId.file_name || undefined);
+            const detectedFileName = messageWithId.file_name || getFileNameFromUrl(messageWithId.file_path);
+            
+            return {
+              ...messageWithId,
+              file_type: detectedFileType,
+              file_name: detectedFileName
+            };
+          }
+          return messageWithId;
+        });
+      
+      // Only set messages if they're different to avoid unnecessary re-renders
+      setMessages(prevMessages => {
+        const newMessagesStr = JSON.stringify(sortedHistory);
+        const prevMessagesStr = JSON.stringify(prevMessages);
+        if (newMessagesStr !== prevMessagesStr) {
+          return sortedHistory;
         }
-        return msg;
+        return prevMessages;
       });
       
-      setMessages(processedHistory);
       return response.data;
-    },
-  });
+    } catch (error) {
+      console.error('Error fetching message history:', error);
+      return [];
+    }
+  },
+  enabled: !!user?.id && !!selectedCharacter?.id,
+  refetchOnMount: true, 
+  refetchOnWindowFocus: false, 
+});
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -412,92 +501,129 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
 
   const isLoading = false; 
 
-  const handleSendMessage = async () => {
-    if (inputMessage.trim() || selectedFile) {
-      let tempFileUrl = null;
-      if (selectedFile && selectedFile.type.startsWith('image/')) {
-        tempFileUrl = URL.createObjectURL(selectedFile);
-      }
+const handleSendMessage = async () => {
+  if (!inputMessage.trim() && !selectedFile) return;
 
-      const userMessage: Message = {
-        id: Date.now(),
-        content: inputMessage,
-        role: "user",
-        file_name: selectedFile?.name || null,
-        file_type: selectedFile?.type || null,
-        file_size: selectedFile?.size || null,
-        file_path: tempFileUrl, // Use temp URL for immediate display
-      };
+  let tempFileUrl = null;
+  
+  // Create temp URL for immediate display - for ALL file types including PDF
+  if (selectedFile) {
+    tempFileUrl = URL.createObjectURL(selectedFile);
+  }
 
-      const updatedMessages = [...messages, userMessage];
-      setMessages(updatedMessages);
-      
-      const currentFile = selectedFile;
-      setInputMessage("");
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      setIsTyping(true);
-
-      try {
-        const formData = new FormData();
-        formData.append("message", inputMessage);
-        formData.append("model", selectedModel.id);
-        formData.append("user_id", user?.id || "");
-        formData.append("bot_id", selectedCharacter?.id.toString() || "");
-        formData.append("chat_history", JSON.stringify(updatedMessages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          file_path: m.file_path || null,
-        }))));
-        if (currentFile) {
-          formData.append("file", currentFile);
-          console.log("File appended:", currentFile.name);
-        }
-        
-        const response = await axios.post("http://127.0.0.1:8000/chat", formData);
-
-        if (currentFile && response.data.file_path) {
-          setMessages(prev => prev.map(msg => {
-            if (msg.id === userMessage.id) {
-              if (tempFileUrl) {
-                URL.revokeObjectURL(tempFileUrl);
-              }
-              return { ...msg, file_path: response.data.file_path };
-            }
-            return msg;
-          }));
-        }
-        const botResponse: Message = {
-          id: Date.now() + 1,
-          content: response.data.content,
-          role: "assistant",
-          file_path: response.data.file_path || null,
-        };
-
-        setMessages((prev) => [...prev, botResponse]);
-      } catch (error) {
-        console.error("Chat error:", error);
-        
-        if (tempFileUrl) {
-          URL.revokeObjectURL(tempFileUrl);
-        }
-        
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + 2,
-            content: "Error fetching response.",
-            role: "assistant",
-          },
-        ]);
-      } finally {
-        setIsTyping(false);
-      }
-    }
+  // Generate unique ID for the message
+  const messageId = `user-${Date.now()}-${Math.random()}`;
+  
+  const userMessage: Message = {
+    id: messageId,
+    content: inputMessage,
+    role: "user",
+    file_name: selectedFile?.name || null,
+    file_type: selectedFile?.type || null,
+    file_size: selectedFile?.size || null,
+    file_path: tempFileUrl,
   };
 
+  // Store current state before clearing
+  const currentInput = inputMessage;
+  const currentFile = selectedFile;
+  const currentFileType = selectedFile?.type || null;
+  const currentFileName = selectedFile?.name || null;
+  
+  // Add user message immediately
+  setMessages(prevMessages => [...prevMessages, userMessage]);
+  
+  // Clear input immediately after adding message
+  setInputMessage("");
+  setSelectedFile(null);
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+  }
+  setIsTyping(true);
+
+  try {
+    const formData = new FormData();
+    formData.append("message", currentInput);
+    formData.append("model", selectedModel.id);
+    formData.append("user_id", user?.id || "");
+    formData.append("bot_id", selectedCharacter?.id.toString() || "");
+    
+    // Get current messages for chat history (without the new user message to avoid duplication)
+    formData.append("chat_history", JSON.stringify(messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      file_path: m.file_path || null,
+    }))));
+    
+    if (currentFile) {
+      formData.append("file", currentFile);
+    }
+    
+    const response = await axios.post("http://127.0.0.1:8000/chat", formData);
+    
+
+    // Update user message with actual file path from server if file was uploaded
+  if (currentFile) {
+  const safeFilePath = response.data.file_path || tempFileUrl;
+  setMessages(prev => prev.map(msg => {
+    if (msg.id === messageId) {
+      // Only revoke temp URL if we're replacing it
+      if (response.data.file_path && tempFileUrl) {
+        URL.revokeObjectURL(tempFileUrl);
+      }
+      return {
+        ...msg,
+        file_path: safeFilePath,
+        file_type: currentFileType,
+        file_name: currentFileName
+      };
+    }
+    return msg;
+  }));
+}
+
+
+    // Add bot response with unique ID
+    const botResponse: Message = {
+      id: `bot-${Date.now()}-${Math.random()}`,
+      content: response.data.content,
+      role: "assistant",
+      file_path: null,
+      file_name: null,
+      file_type: null,
+      file_size: null,
+    };
+
+    // Add bot response after a small delay to ensure proper ordering
+    setTimeout(() => {
+      setMessages(prev => [...prev, botResponse]);
+      setIsTyping(false);
+    }, 100);
+
+  } catch (error) {
+    console.error("Chat error:", error);
+    
+    // Clean up temp URL on error
+    if (tempFileUrl) {
+      URL.revokeObjectURL(tempFileUrl);
+    }
+    
+    const errorMessage: Message = {
+      id: `error-${Date.now()}-${Math.random()}`,
+      content: "Error fetching response.",
+      role: "assistant",
+      file_path: null,
+      file_name: null,
+      file_type: null,
+      file_size: null,
+    };
+    
+    setTimeout(() => {
+      setMessages(prev => [...prev, errorMessage]);
+      setIsTyping(false);
+    }, 100);
+  }
+};
   const handleDeleteMessage = (id: string | number) => {
     setMessages(messages.filter((message) => message.id !== id));
   };
@@ -524,37 +650,46 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
     return fileType && fileType.includes('pdf');
   };
 
-  const renderFileDisplay = (message: Message) => {
-    if (!message.file_path || !message.file_type) return null;
+const renderFileDisplay = (message: Message) => {
+  if (!message.file_path) return null;
+  
+  // Ensure we have file_type, try to detect if missing
+  let fileType = message.file_type;
+  if (!fileType && message.file_path) {
+    fileType = getFileTypeFromUrl(message.file_path, message.file_name || undefined);
+  }
+  
+  if (!fileType) return null;
 
-    if (isImageFile(message.file_type)) {
-      return (
-        <ImageDisplay 
-          filePath={message.file_path} 
-          fileName={message.file_name || 'Image'} 
-          fileType={message.file_type}
-        />
-      );
-    }
+  const fileName = message.file_name || getFileNameFromUrl(message.file_path);
 
-    if (isPDFFile(message.file_type)) {
-      return (
-        <PDFDisplay 
-          filePath={message.file_path} 
-          fileName={message.file_name || 'Document.pdf'} 
-        />
-      );
-    }
-
+  if (isImageFile(fileType)) {
     return (
-      <DocumentDisplay 
+      <ImageDisplay 
         filePath={message.file_path} 
-        fileName={message.file_name || 'Document'} 
-        fileType={message.file_type}
+        fileName={fileName} 
+        fileType={fileType}
       />
     );
-  };
+  }
 
+  if (isPDFFile(fileType)) {
+    return (
+      <PDFDisplay 
+        filePath={message.file_path} 
+        fileName={fileName} 
+      />
+    );
+  }
+
+  return (
+    <DocumentDisplay 
+      filePath={message.file_path} 
+      fileName={fileName} 
+      fileType={fileType}
+    />
+  );
+};
   useEffect(() => {
     handleResize();
   }, [inputMessage]);
@@ -662,98 +797,91 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
         )}
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-6">
-            <div className={`w-20 h-20 rounded-full ${selectedModel.color} flex items-center justify-center text-white font-bold text-2xl mb-4`}>
-              {selectedModel.name.charAt(0)}
+    <div className="flex-1 overflow-y-auto">
+  {messages.length === 0 ? (
+    <div className="flex flex-col items-center justify-center h-full px-6">
+      <div className={`w-20 h-20 rounded-full ${selectedModel.color} flex items-center justify-center text-white font-bold text-2xl mb-4`}>
+        {selectedModel.name.charAt(0)}
+      </div>
+      <h2 className="text-2xl font-bold text-white mb-2">Chat with {selectedModel.name}</h2>
+      <p className="text-gray-400 text-center max-w-md">
+        Start a conversation with {selectedModel.name}. Ask questions, get creative, or explore ideas together.
+      </p>
+    </div>
+  ) : (
+    <div className="px-6 py-4 space-y-6">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex ${
+            message.role === "user" ? "justify-end" : "justify-start"
+          }`}
+        >
+          <div
+            className={`max-w-[70%] ${
+              message.role === "user"
+                ? "bg-purple-600 text-white"
+                : "bg-gray-700 text-gray-100"
+            } rounded-2xl px-4 py-3 relative group`}
+          >
+            <div className="flex items-center space-x-2 mb-1">
+              {message.role === "user" ? (
+                <User className="w-4 h-4" />
+              ) : (
+                <div className={`w-4 h-4 rounded-full ${selectedModel.color}`}></div>
+              )}
+              <span className="text-sm font-medium">
+                {message.role === "user" ? "You" : selectedModel.name}
+              </span>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Chat with {selectedModel.name}</h2>
-            <p className="text-gray-400 text-center max-w-md">
-              Start a conversation with {selectedModel.name}. Ask questions, get creative, or explore ideas together.
-            </p>
-          </div>
-        ) : (
-          <div className="px-6 py-4 space-y-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[70%] ${
-                    message.role === "user"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-700 text-gray-100"
-                  } rounded-2xl px-4 py-3 relative group`}
-                >
-                  <div className="flex items-center space-x-2 mb-1">
-                    {message.role === "user" ? (
-                      <User className="w-4 h-4" />
-                    ) : (
-                      <div className={`w-4 h-4 rounded-full ${selectedModel.color}`}></div>
-                    )}
-                    <span className="text-sm font-medium">
-                      {message.role === "user" ? "You" : selectedModel.name}
-                    </span>
-                  </div>
-                  
-                  {message.content && (
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {message.content}
-                    </div>
-                  )}
-                  
-                  {message.file_path && message.file_type && (
-                    isImageFile(message.file_type) ? (
-                      <ImageDisplay 
-                        filePath={message.file_path} 
-                        fileName={message.file_name || 'Image'} 
-                        fileType={message.file_type}
-                      />
-                    ) : (
-                      <DocumentDisplay 
-                        filePath={message.file_path} 
-                        fileName={message.file_name || 'Document'} 
-                        fileType={message.file_type}
-                      />
-                    )
-                  )}
-                  
-                  <button
-                    onClick={() => handleDeleteMessage(message.id)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3 h-3 text-white" />
-                  </button>
-                </div>
-              </div>
-            ))}
             
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-gray-700 rounded-2xl px-4 py-3 max-w-[70%]">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <div className={`w-4 h-4 rounded-full ${selectedModel.color}`}></div>
-                    <span className="text-sm font-medium text-gray-300">{selectedModel.name}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
-                    <span className="text-sm text-gray-400 ml-2">Thinking...</span>
-                  </div>
-                </div>
+            {message.content && (
+              <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                {message.content}
               </div>
             )}
+            
+            {/* Updated file rendering logic */}
+            {message.file_path && message.file_type && (
+              <div>
+                {renderFileDisplay(message)}
+              </div>
+            )}
+            
+            <button
+              onClick={() => handleDeleteMessage(message.id)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Trash2 className="w-3 h-3 text-white" />
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      ))}
+      
+      {isTyping && (
+        <div className="flex justify-start">
+          <div className="bg-gray-700 rounded-2xl px-4 py-3 max-w-[70%]">
+            <div className="flex items-center space-x-2 mb-1">
+              <div className={`w-4 h-4 rounded-full ${selectedModel.color}`}></div>
+              <span className="text-sm font-medium text-gray-300">{selectedModel.name}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+              <span className="text-sm text-gray-400 ml-2">Thinking...</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Scroll anchor */}
+      <div ref={messagesEndRef} />
+    </div>
+  )}
+</div>
 
       {/* Input Area */}
       <div className="bg-gray-800 border-t border-gray-700 px-6 py-4">
