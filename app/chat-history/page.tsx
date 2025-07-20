@@ -70,7 +70,7 @@ const [isChatActive, setIsChatActive] = useState(false);
     queryFn: async () => {
       if (!user?.id) return { chats: [] };
       const response = await axios.get(
-        `http://127.0.0.1:8000/users/chats/${user.id}`
+        `https://fyp-backend-d3ac9a1574db.herokuapp.com/users/chats/${user.id}`
       );
       return response.data;
     },
@@ -80,7 +80,7 @@ const [isChatActive, setIsChatActive] = useState(false);
   // Delete chat mutation
   const deleteChatMutation = useMutation({
     mutationFn: async (sessionId) => {
-      await axios.delete(`http://127.0.0.1:8000/chat/session/${sessionId}`, {
+      await axios.delete(`https://fyp-backend-d3ac9a1574db.herokuapp.com/chat/session/${sessionId}`, {
         headers: {
           'Authorization': `Bearer ${user?.id}`,
         }
@@ -120,7 +120,7 @@ const handleContinueChat = async (sessionId, botId) => {
       queryKey: ["messageHistory", user?.id, botId],
       queryFn: async () => {
         const response = await axios.get(
-          `http://127.0.0.1:8000/chat/${user.id}/${botId}`,
+          `https://fyp-backend-d3ac9a1574db.herokuapp.com/chat/${user.id}/${botId}`,
           {
             headers: {
               'Authorization': `Bearer ${user.id}`,

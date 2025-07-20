@@ -47,7 +47,7 @@ const CharacterSelectionPage = () => {
     queryKey: ["bots", user?.id],
     queryFn: async () => {
       if (!user) return { bots: [] };
-      const botsRes = await axios.get(`http://127.0.0.1:8000/bots/all/${user.id}`);
+      const botsRes = await axios.get(`https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/all/${user.id}`);
       
       return {
         bots: botsRes.data.bots, // your list of all bots with favorite property
@@ -79,13 +79,13 @@ const CharacterSelectionPage = () => {
     try {
       if (currentFavoriteStatus) {
         // Remove from favorites
-        await axios.post(`http://127.0.0.1:8000/bots/remove-favourite`, {
+        await axios.post(`https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/remove-favourite`, {
           botId,
           userId,
         });
       } else {
         // Add to favorites
-        await axios.post(`http://127.0.0.1:8000/bots/add-favourite`, {
+        await axios.post(`https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/add-favourite`, {
           botId,
           userId,
         });

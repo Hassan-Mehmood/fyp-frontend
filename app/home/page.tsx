@@ -85,7 +85,7 @@ useEffect(() => {
     try {
       setCreditsData(prev => ({ ...prev, loading: true, error: null }));
 
-      const response = await axios.get(`http://127.0.0.1:8000/aggregate/${user.id}`, {
+      const response = await axios.get(`https://fyp-backend-d3ac9a1574db.herokuapp.com/aggregate/${user.id}`, {
         headers: {
           'Content-Type': 'application/json',
         },

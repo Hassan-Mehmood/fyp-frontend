@@ -422,7 +422,7 @@ const { data: messageHistory } = useQuery({
     
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/chat/${user.id}/${currentBot.id}`,
+        `https://fyp-backend-d3ac9a1574db.herokuapp.com/chat/${user.id}/${currentBot.id}`,
         {
           headers: {
             'Authorization': `Bearer ${user.id}`, // Add auth header
@@ -559,7 +559,7 @@ const handleSendMessage = async () => {
       formData.append("file", currentFile);
     }
     
-    const response = await axios.post("http://127.0.0.1:8000/chat", formData);
+    const response = await axios.post("https://fyp-backend-d3ac9a1574db.herokuapp.com/chat", formData);
     
 
     // Update user message with actual file path from server if file was uploaded

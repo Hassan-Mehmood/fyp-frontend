@@ -113,7 +113,7 @@ const CreditsPage = () => {
   const { user } = useUser();
   const user_id = user?.id;
 
-  const API_BASE_URL = "http://127.0.0.1:8000";
+  const API_BASE_URL = "https://fyp-backend-d3ac9a1574db.herokuapp.com";
 
   const fetchUserCredits = async () => {
     if (!user_id) return;
