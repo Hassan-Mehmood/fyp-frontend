@@ -21,7 +21,7 @@ const CharacterCard = ({
       onClick={onToggleFavorite}
       className="absolute top-2 right-2 text-red-500 hover:scale-110 transition-transform"
     >
-      {isFavorite ? "❤️" : "♡"} {/* ❤️ / ♡ */}
+      {isFavorite ? "❤️" : "♡ "} {/* ❤️ / ♡ */}
     </button>
     <div className="p-4">
       <h3 className="text-lg font-semibold mb-2 text-white">{name}</h3>
