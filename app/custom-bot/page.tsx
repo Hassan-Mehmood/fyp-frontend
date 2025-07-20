@@ -300,16 +300,15 @@ const handleSubmit = async (e) => {
                   htmlFor="botPrompt"
                   className="block text-sm font-medium text-gray-300 mb-2"
                 >
-                  Bot Personality
+                  Prompt
                 </label>
-                <input
-                  type="text"
-                  id="botPrompt"
-                  value={botPrompt}
-                  onChange={(e) => setBotPrompt(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150"
-                  placeholder="e.g., Friendly, Professional, Humorous"
-                />
+               <textarea
+                id="botPrompt"
+                value={botPrompt}
+                onChange={(e) => setBotPrompt(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150"
+                placeholder="e.g., Friendly, Professional, Humorous"
+              />
               </div>
 
               <div>
