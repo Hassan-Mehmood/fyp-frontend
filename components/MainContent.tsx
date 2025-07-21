@@ -18,19 +18,21 @@ type Message = {
 };
 
 const MODELS = [
-  { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI", color: "bg-teal-500" },
-  { id: "gpt-4.1", name: "GPT-4.1", provider: "OpenAI", color: "bg-blue-500" },
-  { id: "gpt-4.1-mini", name: "GPT-4.1-mini", provider: "OpenAI", color: "bg-blue-400" },
-  { id: "gpt-4o-mini", name: "GPT-4o-mini", provider: "OpenAI", color: "bg-teal-400" },
-  { id: "gemma2-9b-it", name: "Gemma2-9b", provider: "Groq", color: "bg-purple-500" },
-  { id: "groq-1.5", name: "Groq-1.5", provider: "Groq", color: "bg-purple-600" },
-  { id: "llama-3.1-8b-instant", name: "Llama-3.1-8b", provider: "Groq", color: "bg-orange-500" },
-  { id: "llama-3.3-70b-versatile", name: "Llama-3.3-70b", provider: "Groq", color: "bg-orange-600" },
-  { id: "llama3-8b-8192", name: "Llama3-8b", provider: "Groq", color: "bg-orange-400" },
-  { id: "gemini-2.0-flash", name: "Gemini-2.0-Flash", provider: "Google", color: "bg-yellow-500" },
-  { id: "gemini-2.0-pro", name: "Gemini-2.0-Pro", provider: "Google", color: "bg-yellow-600" },
-  { id: "gemini-2.5-flash", name: "Gemini-2.5-Flash", provider: "Google", color: "bg-yellow-400" },
-  { id: "gemini-2.5-pro", name: "Gemini-2.5-Pro", provider: "Google", color: "bg-yellow-500" },
+  { id: "openai:gpt-4o", name: "GPT-4o", provider: "OpenAI", color: "bg-teal-500" },
+  { id: "openai:gpt-4.1", name: "GPT-4.1", provider: "OpenAI", color: "bg-blue-500" },
+  { id: "openai:gpt-4.1-mini", name: "GPT-4.1-mini", provider: "OpenAI", color: "bg-blue-400" },
+  { id: "openai:gpt-4o-mini", name: "GPT-4o-mini", provider: "OpenAI", color: "bg-teal-400" },
+  { id: "groq:gemma2-9b-it", name: "Gemma2-9b", provider: "Groq", color: "bg-purple-500" },
+  { id: "groq:llama-3.1-8b-instant", name: "Llama-3.1-8b", provider: "Groq", color: "bg-orange-500" },
+  { id: "groq:llama-3.3-70b-versatile", name: "Llama-3.3-70b", provider: "Groq", color: "bg-orange-600" },
+  // { id: "google:gemini-2.0-flash", name: "Gemini-2.0-Flash", provider: "Google", color: "bg-yellow-500" },
+  // { id: "google:gemini-2.0-pro", name: "Gemini-2.0-Pro", provider: "Google", color: "bg-yellow-600" },
+  // { id: "google:gemini-2.5-flash", name: "Gemini-2.5-Flash", provider: "Google", color: "bg-yellow-400" },
+  // { id: "google:gemini-2.5-pro", name: "Gemini-2.5-Pro", provider: "Google", color: "bg-yellow-500" },
+  { id: "anthropic:claude-3-7-sonnet-latest", name: "Claude-3.7-Sonnet", provider: "Anthropic", color: "bg-purple-500" },
+  { id: "anthropic:claude-sonnet-4-20250514", name: "Claude-Sonnet-4", provider: "Anthropic", color: "bg-purple-600" },
+  { id: "anthropic:claude-opus-4-20250514", name: "Claude-Opus-4", provider: "Anthropic", color: "bg-purple-700" },
+
 ];
 
 const getFileTypeFromUrl = (url: string, fileName?: string): string => {
