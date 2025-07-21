@@ -5,6 +5,7 @@ import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from 'next/navigation';
+import axiosInstance from "@/utils/axios";
 
 type Message = {
   id: string | number;
@@ -421,13 +422,8 @@ const { data: messageHistory } = useQuery({
     if (!user?.id || !currentBot?.id) return [];
     
     try {
-      const response = await axios.get(
-        `https://fyp-backend-d3ac9a1574db.herokuapp.com/chat/${user.id}/${currentBot.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${user.id}`, // Add auth header
-          }
-        }
+      const response = await axiosInstance.get(
+        `/chat/${user.id}/${currentBot.id}`,
       );
       
       // Sort messages by created_at (assuming the backend sends this field)
@@ -559,7 +555,7 @@ const handleSendMessage = async () => {
       formData.append("file", currentFile);
     }
     
-    const response = await axios.post("https://fyp-backend-d3ac9a1574db.herokuapp.com/chat", formData);
+    const response = await axiosInstance.post("/chat", formData);
     
 
     // Update user message with actual file path from server if file was uploaded

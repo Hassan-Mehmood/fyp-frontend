@@ -11,6 +11,7 @@ import {
   useUser,
 } from '@clerk/nextjs';
 import axios from 'axios';
+import axiosInstance from '@/utils/axios';
 
 const FeatureCard = ({ icon, title, description, href, gradient = false }) => (
   <Link href={href} className="h-full flex">
@@ -85,11 +86,7 @@ useEffect(() => {
     try {
       setCreditsData(prev => ({ ...prev, loading: true, error: null }));
 
-      const response = await axios.get(`https://fyp-backend-d3ac9a1574db.herokuapp.com/aggregate/${user.id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await axiosInstance.get(`/aggregate/${user.id}`);
 
       const data = response.data;
 

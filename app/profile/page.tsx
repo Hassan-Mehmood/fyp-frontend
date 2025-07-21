@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import ProfileClientView from "./ProfileClientView";
 import axios from "axios";
+import axiosInstance from "@/utils/axios";
 
 export default async function ProfilePage() {
   const user = await currentUser();
@@ -20,7 +21,7 @@ export default async function ProfilePage() {
     id: user.id,
   };
 
-  const response = await axios.get(`https://fyp-backend-d3ac9a1574db.herokuapp.com/profile/${user.id}`);
+  const response = await axiosInstance.get(`/profile/${user.id}`);
 
   if (response.status !== 200) {
     return (

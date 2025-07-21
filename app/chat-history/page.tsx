@@ -13,6 +13,7 @@ import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from 'next/navigation';
 import MainContent from "@/components/MainContent";
+import axiosInstance from "@/utils/axios";
 
 const ChatSessionCard = ({ session, onContinue, onDelete }) => {
   const { bot, id, updated_at, message } = session;
@@ -69,8 +70,8 @@ const [isChatActive, setIsChatActive] = useState(false);
     queryKey: ["chats", user?.id],
     queryFn: async () => {
       if (!user?.id) return { chats: [] };
-      const response = await axios.get(
-        `https://fyp-backend-d3ac9a1574db.herokuapp.com/users/chats/${user.id}`
+      const response = await axiosInstance.get(
+        `/users/chats/${user.id}`
       );
       return response.data;
     },
@@ -80,7 +81,7 @@ const [isChatActive, setIsChatActive] = useState(false);
   // Delete chat mutation
   const deleteChatMutation = useMutation({
     mutationFn: async (sessionId) => {
-      await axios.delete(`https://fyp-backend-d3ac9a1574db.herokuapp.com/chat/session/${sessionId}`, {
+      await axiosInstance.delete(`/chat/session/${sessionId}`, {
         headers: {
           'Authorization': `Bearer ${user?.id}`,
         }
@@ -119,8 +120,8 @@ const handleContinueChat = async (sessionId, botId) => {
     await queryClient.prefetchQuery({
       queryKey: ["messageHistory", user?.id, botId],
       queryFn: async () => {
-        const response = await axios.get(
-          `https://fyp-backend-d3ac9a1574db.herokuapp.com/chat/${user.id}/${botId}`,
+        const response = await axiosInstance.get(
+          `/chat/${user?.id}/${botId}`,
           {
             headers: {
               'Authorization': `Bearer ${user.id}`,

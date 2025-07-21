@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { AlertCircle, CheckCircle, Upload, X, Image as ImageIcon } from "lucide-react";
+import axiosInstance from "@/utils/axios";
 
 const CreateCustomBotPage = () => {
   const [botName, setBotName] = useState("");
@@ -128,22 +129,15 @@ const handleSubmit = async (e) => {
   };
 
   try {
-    const response = await fetch(
-      `https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/create/${user.id}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
+    const response = await axiosInstance.post(
+      `/bots/create/${user.id}`,
+      payload
     );
 
-    if (!response.ok) {
+    if (!response.status) {
       throw new Error("Failed to create bot");
     }
 
-    const data = await response.json();
     showToast("Bot created successfully!", "success");
     resetForm();
   } catch (error) {

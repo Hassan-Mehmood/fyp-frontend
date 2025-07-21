@@ -3,6 +3,7 @@ import { useUser } from "@clerk/nextjs";
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import axios from "axios";
+import axiosInstance from "@/utils/axios";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
 
@@ -113,7 +114,6 @@ const CreditsPage = () => {
   const { user } = useUser();
   const user_id = user?.id;
 
-  const API_BASE_URL = "https://fyp-backend-d3ac9a1574db.herokuapp.com";
 
   const fetchUserCredits = async () => {
     if (!user_id) return;
@@ -122,14 +122,14 @@ const CreditsPage = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await axios.get(`${API_BASE_URL}/users/credits/${user_id}`, {
+      const response = await axiosInstance.get(`/users/credits/${user_id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-       const transactionsResponse = await axios.get(`${API_BASE_URL}/users/transaction-history/${user_id}`, {
+       const transactionsResponse = await axiosInstance.get(`/users/transaction-history/${user_id}`, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -187,23 +187,17 @@ const transactionsData: Transaction[] = transactionsDataRaw.map((txn: any) => ({
       
       console.log("Creating checkout session for:", { creditAmount, price, user_id });
 
-      const response = await fetch(`${API_BASE_URL}/stripe/create-checkout-session`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          amount: creditAmount, 
-          price: price,
-          user_id 
-        }),
+      const response = await axiosInstance.post(`/stripe/create-checkout-session`, {
+        amount: creditAmount,
+        price: price,
+        user_id
       });
-
-      if (!response.ok) {
+      
+      if (!response.status) {
         throw new Error(`Failed to create checkout session: ${response.status}`);
       }
 
-      const { session_id } = await response.json();
+      const { session_id } = await response.data;
       
       if (!session_id) {
         throw new Error('No session ID returned from server');

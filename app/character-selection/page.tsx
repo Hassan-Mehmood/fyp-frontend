@@ -5,6 +5,7 @@ import MainContent from "../../components/MainContent"; // Import the MainConten
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
+import axiosInstance from "@/utils/axios";
 
 const CharacterCard = ({
   name,
@@ -47,7 +48,7 @@ const CharacterSelectionPage = () => {
     queryKey: ["bots", user?.id],
     queryFn: async () => {
       if (!user) return { bots: [] };
-      const botsRes = await axios.get(`https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/all/${user.id}`);
+      const botsRes = await axiosInstance.get(`/bots/all/${user.id}`);
       
       return {
         bots: botsRes.data.bots, // your list of all bots with favorite property
@@ -79,13 +80,13 @@ const CharacterSelectionPage = () => {
     try {
       if (currentFavoriteStatus) {
         // Remove from favorites
-        await axios.post(`https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/remove-favourite`, {
+        await axiosInstance.post(`/bots/remove-favourite`, {
           botId,
           userId,
         });
       } else {
         // Add to favorites
-        await axios.post(`https://fyp-backend-d3ac9a1574db.herokuapp.com/bots/add-favourite`, {
+        await axiosInstance.post(`/bots/add-favourite`, {
           botId,
           userId,
         });
