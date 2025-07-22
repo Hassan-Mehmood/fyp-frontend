@@ -7,6 +7,8 @@ import {
   MessageSquare,
   Bot,
   Clock,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -14,6 +16,69 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from 'next/navigation';
 import MainContent from "@/components/MainContent";
 import axiosInstance from "@/utils/axios";
+
+// Beautiful Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, botName, isLoading }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 border border-gray-700">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <div className="bg-red-500/20 p-3 rounded-full mr-4">
+                <AlertTriangle size={24} className="text-red-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-white">Delete Chat</h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-300 transition-colors"
+              disabled={isLoading}
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="mb-6">
+            <p className="text-gray-300 mb-2">
+              Are you sure you want to delete this chat with{" "}
+              <span className="font-semibold text-white">{botName}</span>?
+            </p>
+            <p className="text-gray-400 text-sm">
+              This action cannot be undone. All messages in this conversation will be permanently deleted.
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                'Delete Chat'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ChatSessionCard = ({ session, onContinue, onDelete }) => {
   const { bot, id, updated_at, message } = session;
@@ -45,8 +110,8 @@ const ChatSessionCard = ({ session, onContinue, onDelete }) => {
           Continue Chat
         </button>
         <button
-          onClick={() => onDelete(id)}
-          className="text-red-500 hover:text-red-600 transition duration-300"
+          onClick={() => onDelete(session)}
+          className="text-red-500 hover:text-red-600 transition duration-300 p-2 rounded-lg hover:bg-red-500/10"
         >
           <Trash2 size={18} />
         </button>
@@ -58,12 +123,12 @@ const ChatSessionCard = ({ session, onContinue, onDelete }) => {
 const ChatHistoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, session: null });
   const router = useRouter();
   const { user } = useUser();
   const queryClient = useQueryClient();
   const [selectedCharacter, setSelectedCharacter] = useState(null);
-const [isChatActive, setIsChatActive] = useState(false);
-
+  const [isChatActive, setIsChatActive] = useState(false);
 
   // Fetch chat history
   const { data, isLoading, error } = useQuery({
@@ -78,22 +143,26 @@ const [isChatActive, setIsChatActive] = useState(false);
     enabled: !!user?.id,
   });
 
-  // Delete chat mutation
+  // Delete chat mutation - FIXED VERSION with correct API endpoint
   const deleteChatMutation = useMutation({
-    mutationFn: async (sessionId) => {
-      await axiosInstance.delete(`/chat/session/${sessionId}`, {
+    mutationFn: async ({ userId, botId }) => {
+      // Using the correct API endpoint: /chats/user_id/bot_id
+      await axiosInstance.delete(`/chats/${userId}/${botId}`, {
         headers: {
-          'Authorization': `Bearer ${user?.id}`,
+          'Authorization': `Bearer ${userId}`,
         }
       });
     },
     onSuccess: () => {
       // Refresh the chat list after deletion
       queryClient.invalidateQueries(['chats', user?.id]);
+      // Close the modal
+      setDeleteModal({ isOpen: false, session: null });
     },
     onError: (error) => {
       console.error('Error deleting chat:', error);
       // You might want to show a toast notification here
+      alert('Failed to delete chat. Please try again.');
     }
   });
 
@@ -110,39 +179,55 @@ const [isChatActive, setIsChatActive] = useState(false);
     return matchesSearch && matchesDate;
   }) || [];
 
-const handleContinueChat = async (sessionId, botId) => {
-  if (!botId) {
-    console.error('Bot ID is missing');
-    return;
-  }
+  const handleContinueChat = async (sessionId, botId) => {
+    if (!botId) {
+      console.error('Bot ID is missing');
+      return;
+    }
 
-  try {
-    await queryClient.prefetchQuery({
-      queryKey: ["messageHistory", user?.id, botId],
-      queryFn: async () => {
-        const response = await axiosInstance.get(
-          `/chat/${user?.id}/${botId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${user.id}`,
+    try {
+      await queryClient.prefetchQuery({
+        queryKey: ["messageHistory", user?.id, botId],
+        queryFn: async () => {
+          const response = await axiosInstance.get(
+            `/chat/${user?.id}/${botId}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${user.id}`,
+              }
             }
-          }
-        );
-        return response.data;
-      },
-    });
+          );
+          return response.data;
+        },
+      });
 
-    setSelectedCharacter({ id: botId, sessionId }); // you can enhance this if more info is needed
-    setIsChatActive(true);
-  } catch (error) {
-    console.error('Error prefetching message history:', error);
-  }
-};
+      setSelectedCharacter({ id: botId, sessionId });
+      setIsChatActive(true);
+    } catch (error) {
+      console.error('Error prefetching message history:', error);
+    }
+  };
 
+  // Updated delete handler to open modal instead of using window.confirm
+  const handleDeleteChat = (session) => {
+    setDeleteModal({ isOpen: true, session });
+  };
 
-  const handleDeleteChat = (sessionId) => {
-    if (window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
-      deleteChatMutation.mutate(sessionId);
+  // Confirm delete with correct API call
+  const confirmDelete = () => {
+    if (deleteModal.session && user?.id) {
+    console.log(deleteModal.session.bot?.id)
+      deleteChatMutation.mutate({
+        userId: user.id,
+        botId: deleteModal.session.bot?.id
+      });
+    }
+  };
+
+  // Close delete modal
+  const closeDeleteModal = () => {
+    if (!deleteChatMutation.isLoading) {
+      setDeleteModal({ isOpen: false, session: null });
     }
   };
 
@@ -173,9 +258,10 @@ const handleContinueChat = async (sessionId, botId) => {
       </div>
     );
   }
+
   if (isChatActive && selectedCharacter) {
-  return <MainContent selectedCharacter={selectedCharacter} />;
-}
+    return <MainContent selectedCharacter={selectedCharacter} />;
+  }
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
@@ -284,15 +370,14 @@ const handleContinueChat = async (sessionId, botId) => {
           )}
         </div>
 
-        {/* Loading state for delete operation */}
-        {deleteChatMutation.isLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-6 rounded-lg">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-white">Deleting chat...</p>
-            </div>
-          </div>
-        )}
+        {/* Beautiful Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={deleteModal.isOpen}
+          onClose={closeDeleteModal}
+          onConfirm={confirmDelete}
+          botName={deleteModal.session?.bot?.name || "this bot"}
+          isLoading={deleteChatMutation.isLoading}
+        />
       </div>
     </div>
   );

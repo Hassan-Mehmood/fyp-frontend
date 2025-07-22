@@ -45,15 +45,27 @@ const Sidebar = () => {
         setIsMobileMenuOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMobileMenuOpen]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
+  // Filter navigation items based on authentication status
+  const getFilteredNavigationItems = () => {
+    if (!isLoaded) return []; // Don't show any items while loading
+    
+    if (isSignedIn) {
+      // Show all items when signed in
+      return navigationItems;
+    } else {
+      // Show only items that don't require authentication
+      return navigationItems.filter(item => !item.requiresAuth);
+    }
+  };
+
   const navigationItems = [
-    { icon: <Home size={18} />, label: "Home", href: "/home", requiresAuth: false },
+    { icon: <Home size={18} />, label: "Home", href: "/home", requiresAuth: true },
     { icon: <User size={18} />, label: "Profile", href: "/profile", requiresAuth: true },
     { icon: <Bot size={18} />, label: "Character Selection", href: "/character-selection", requiresAuth: true },
     { icon: <PlusCircle size={18} />, label: "Create Custom Bot", href: "/custom-bot", requiresAuth: true },
@@ -147,63 +159,66 @@ const Sidebar = () => {
     );
   };
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center mb-6 md:mb-8">
-        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mr-3">
-          <span className="text-white font-bold text-sm">N</span>
-        </div>
-        <h1 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-          Instant Bots
-        </h1>
-      </div>
-
-      {/* Auth Status Indicator */}
-      {isLoaded && (
-        <div className={`mb-4 p-3 rounded-lg ${
-          isSignedIn 
-            ? isDarkMode ? 'bg-green-900/30 border border-green-700' : 'bg-green-50 border border-green-200'
-            : isDarkMode ? 'bg-red-900/30 border border-red-700' : 'bg-red-50 border border-red-200'
-        }`}>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${
-              isSignedIn ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            <span className={`text-xs font-medium ${
-              isSignedIn 
-                ? isDarkMode ? 'text-green-300' : 'text-green-700'
-                : isDarkMode ? 'text-red-300' : 'text-red-700'
-            }`}>
-              {isSignedIn ? 'Signed In' : 'Not Signed In'}
-            </span>
+  const SidebarContent = () => {
+    const filteredItems = getFilteredNavigationItems();
+    
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center mb-6 md:mb-8">
+          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mr-3">
+            <span className="text-white font-bold text-sm">N</span>
           </div>
+          <h1 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Instant Bots
+          </h1>
         </div>
-      )}
+        
+        {/* Auth Status Indicator */}
+        {isLoaded && (
+          <div className={`mb-4 p-3 rounded-lg ${
+            isSignedIn 
+              ? isDarkMode ? 'bg-green-900/30 border border-green-700' : 'bg-green-50 border border-green-200'
+              : isDarkMode ? 'bg-red-900/30 border border-red-700' : 'bg-red-50 border border-red-200'
+          }`}>
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                isSignedIn ? 'bg-green-500' : 'bg-red-500'
+              }`}></div>
+              <span className={`text-xs font-medium ${
+                isSignedIn 
+                  ? isDarkMode ? 'text-green-300' : 'text-green-700'
+                  : isDarkMode ? 'text-red-300' : 'text-red-700'
+              }`}>
+                {isSignedIn ? 'Signed In' : 'Not Signed In'}
+              </span>
+            </div>
+          </div>
+        )}
 
-
-      {/* Navigation Section */}
-      <div className="mb-6 flex-1">
-        <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          NAVIGATION
-        </h2>
-        <nav>
-          <ul className="space-y-1">
-            {navigationItems.map((item) => (
-              <SidebarItem
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                href={item.href}
-                isActive={activeItem === item.label}
-                requiresAuth={item.requiresAuth}
-              />
-            ))}
-          </ul>
-        </nav>
+        {/* Navigation Section */}
+        <div className="mb-6 flex-1">
+          <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            NAVIGATION
+          </h2>
+          <nav>
+            <ul className="space-y-1">
+              {filteredItems.map((item) => (
+                <SidebarItem
+                  key={item.label}
+                  icon={item.icon}
+                  label={item.label}
+                  href={item.href}
+                  isActive={activeItem === item.label}
+                  requiresAuth={item.requiresAuth}
+                />
+              ))}
+            </ul>
+          </nav>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -218,7 +233,7 @@ const Sidebar = () => {
           <Menu size={20} />
         </button>
       )}
-
+      
       {/* Mobile Overlay */}
       {isMobile && isMobileMenuOpen && (
         <div 
@@ -226,7 +241,7 @@ const Sidebar = () => {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
+      
       {/* Sidebar */}
       <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} transition-colors duration-300`}>
         <aside className={`sidebar-container w-64 h-screen p-4 flex flex-col shadow-lg transition-transform duration-300 ${
@@ -248,16 +263,16 @@ const Sidebar = () => {
               <X size={20} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
             </button>
           )}
-
+          
           <SidebarContent />
         </aside>
       </div>
-
+      
       {/* Main Content Spacer - only on desktop */}
       {!isMobile && (
         <div className="w-64 flex-shrink-0" />
       )}
-
+      
       {/* Auth Modal */}
       {showAuthModal && <AuthModal />}
     </>

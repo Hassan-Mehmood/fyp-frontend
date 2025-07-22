@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X, FileText, Download, Eye, File, Image } from "lucide-react";
+import { Send, User, Bot, Trash2, Settings, Search, Plus, Mic, MoreHorizontal, Paperclip, X, FileText, Download, Eye, File, Image, CreditCard, AlertTriangle } from "lucide-react";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +15,9 @@ type Message = {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
+};
+type UserCredits = {
+  credits: number;
 };
 
 const MODELS = [
@@ -119,7 +122,55 @@ const downloadFile = async (filePath: string, fileName: string) => {
   }
 };
 
+const CreditAlertModal = ({ isOpen, onClose, currentCredits, onPurchaseCredits }: {
+  isOpen: boolean;
+  onClose: () => void;
+  currentCredits: number;
+  onPurchaseCredits: () => void;
+}) => {
+  if (!isOpen) return null;
 
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-700">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="p-2 bg-red-500 rounded-lg">
+            <AlertTriangle className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Insufficient Credits</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-gray-300 mb-2">
+            You don't have enough credits to send this message.
+          </p>
+          <p className="text-sm text-gray-400">
+            Current balance: <span className="font-medium text-white">{currentCredits} credits</span>
+          </p>
+          <p className="text-sm text-gray-400 mt-2">
+            Each message costs 1 credit. Please purchase more credits to continue chatting.
+          </p>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button
+            onClick={onPurchaseCredits}
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Buy Credits</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ImageDisplay = ({ filePath, fileName, fileType }: { filePath: string; fileName: string; fileType?: string }) => {
   const [imageError, setImageError] = useState(false);
@@ -393,10 +444,48 @@ const MainContent = ({ selectedCharacter = { id: 1, name: "Assistant" } }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
     const searchParams = useSearchParams();
   const botId = searchParams.get('bot');
+   const [currentCredits, setCurrentCredits] = useState<number>(0);
+  const [showCreditAlert, setShowCreditAlert] = useState(false);
+  const [isCheckingCredits, setIsCheckingCredits] = useState(false);
+  const [creditError, setCreditError] = useState<string | null>(null);
+    const { user } = useUser();
 
    const [currentBot, setCurrentBot] = useState(
     selectedCharacter || { id: 1, name: "Assistant" }
   );
+  const fetchUserCredits = async () => {
+    if (!user?.id) return;
+    console.log("fetchUserCredits")
+    
+    try {
+      setIsCheckingCredits(true);
+      setCreditError(null);
+      
+      const response = await axiosInstance.get(`/users/credits/${user.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data: UserCredits = response.data;
+      setCurrentCredits(data.credits);
+    } catch (error) {
+      console.error('Error fetching user credits:', error);
+      setCreditError('Failed to load credits. Please try again.');
+    } finally {
+      setIsCheckingCredits(false);
+    }
+  };
+   useEffect(() => {
+    if (user?.id) {
+      fetchUserCredits();
+    }
+  }, [user?.id]);
+
+   const handlePurchaseCredits = () => {
+    setShowCreditAlert(false);
+    window.location.href = '/credits'; 
+  };
    useEffect(() => {
     if (botId && botId !== currentBot.id.toString()) {
       // Fetch bot details or use the botId to set the current bot
@@ -416,7 +505,6 @@ useEffect(() => {
   scrollToBottom();
 }, [messages, isTyping]);
 
-  const { user } = useUser();
   
 const { data: messageHistory } = useQuery({
   queryKey: ["messageHistory", user?.id, currentBot?.id],
@@ -501,7 +589,10 @@ const { data: messageHistory } = useQuery({
 
 const handleSendMessage = async () => {
   if (!inputMessage.trim() && !selectedFile) return;
-
+  if (currentCredits <= 0) {
+      setShowCreditAlert(true);
+      return;
+    }
   let tempFileUrl = null;
   
   // Create temp URL for immediate display - for ALL file types including PDF
@@ -558,6 +649,7 @@ const handleSendMessage = async () => {
     }
     
     const response = await axiosInstance.post("/chat", formData);
+    setCurrentCredits(prev => Math.max(0, prev - 1));
     
 
     // Update user message with actual file path from server if file was uploaded
@@ -606,22 +698,28 @@ const handleSendMessage = async () => {
       URL.revokeObjectURL(tempFileUrl);
     }
     
-    const errorMessage: Message = {
-      id: `error-${Date.now()}-${Math.random()}`,
-      content: "Error fetching response.",
-      role: "assistant",
-      file_path: null,
-      file_name: null,
-      file_type: null,
-      file_size: null,
-    };
-    
-    setTimeout(() => {
-      setMessages(prev => [...prev, errorMessage]);
-      setIsTyping(false);
-    }, 100);
-  }
-};
+ if (error.response?.status === 402 || error.response?.data?.error?.includes('insufficient credits')) {
+        setShowCreditAlert(true);
+        // Remove the user message that failed
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      } else {
+        const errorMessage: Message = {
+          id: `error-${Date.now()}-${Math.random()}`,
+          content: "Error fetching response.",
+          role: "assistant",
+          file_path: null,
+          file_name: null,
+          file_type: null,
+          file_size: null,
+        };
+        
+        setTimeout(() => {
+          setMessages(prev => [...prev, errorMessage]);
+          setIsTyping(false);
+        }, 100);
+      }
+    }
+  };
   const handleDeleteMessage = (id: string | number) => {
     setMessages(messages.filter((message) => message.id !== id));
   };
@@ -716,7 +814,7 @@ const renderFileDisplay = (message: Message) => {
   return (
     <div className="flex flex-col h-screen bg-gray-900">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+       <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
@@ -729,13 +827,25 @@ const renderFileDisplay = (message: Message) => {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-              <Search className="w-5 h-5 text-gray-400" />
-            </button>
-            <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-              <MoreHorizontal className="w-5 h-5 text-gray-400" />
-            </button>
+          <div className="flex items-center space-x-4">
+            {/* Credits Display */}
+            <div className="flex items-center space-x-2 bg-gray-700 px-3 py-1.5 rounded-lg">
+              <CreditCard className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium text-white">
+                {isCheckingCredits ? '...' : currentCredits} credits
+              </span>
+              {currentCredits <= 5 && (
+                <AlertTriangle className="w-4 h-4 text-yellow-400" />
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <Search className="w-5 h-5 text-gray-400" />
+              </button>
+              <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <MoreHorizontal className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -935,6 +1045,12 @@ const renderFileDisplay = (message: Message) => {
           </button>
         </div>
       </div>
+      <CreditAlertModal
+        isOpen={showCreditAlert}
+        onClose={() => setShowCreditAlert(false)}
+        currentCredits={currentCredits}
+        onPurchaseCredits={handlePurchaseCredits}
+      />
     </div>
   );
 };
