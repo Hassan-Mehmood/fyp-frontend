@@ -147,7 +147,7 @@ const ChatHistoryPage = () => {
   const deleteChatMutation = useMutation({
     mutationFn: async ({ userId, botId }) => {
       // Using the correct API endpoint: /chats/user_id/bot_id
-      await axiosInstance.delete(`/chats/${userId}/${botId}`, {
+      await axiosInstance.delete(`/chat/${userId}/${botId}`, {
         headers: {
           'Authorization': `Bearer ${userId}`,
         }
