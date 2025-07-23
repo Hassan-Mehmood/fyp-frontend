@@ -35,7 +35,7 @@ const PremiumPopup = ({ bot, onClose, onPurchase, isLoading }) => (
           <img 
             src={bot.avatar} 
             alt={bot.name} 
-            className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-purple-400"
+            className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-purple-400 "
           />
           <h3 className="text-xl font-semibold text-white mb-2">{bot.name}</h3>
           <p className="text-gray-300 text-sm mb-4">{bot.description}</p>
