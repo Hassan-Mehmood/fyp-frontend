@@ -14,6 +14,7 @@ interface Transaction {
   description: string;
   amount: number;
   credits: number;
+price: number;
   type: 'purchase' | 'usage';
 }
 
@@ -82,9 +83,9 @@ const TransactionHistory = ({ transactions, isLoading }: { transactions: Transac
               </td>
               <td className="px-4 py-3">{transaction.description}</td>
               <td className="px-4 py-3">
-                {transaction.amount > 0
-                  ? `+$${transaction.amount.toFixed(2)}`
-                  : `-$${Math.abs(transaction.amount).toFixed(2)}`}
+                {transaction.price > 0
+                  ? `+$${transaction.price.toFixed(2)}`
+                  : `-$${Math.abs(transaction.price).toFixed(2)}`}
               </td>
               <td
                 className={`px-4 py-3 ${
@@ -138,11 +139,14 @@ const CreditsPage = () => {
       const data: UserCredits = await response.data;
       const transactionsDataRaw = transactionsResponse.data.transaction_history;
 
+      console.log("Transactions Data Raw:", transactionsDataRaw);
+
 const transactionsData: Transaction[] = transactionsDataRaw.map((txn: any) => ({
   id: txn.id,
   date: txn.date,
   description: txn.type === 'PURCHASE' ? 'Credit Purchase' : 'Usage',
   amount: txn.amount,
+  price: txn.price, // Assuming price is included in the transaction data
   credits: txn.type === 'PURCHASE' ? txn.amount : -txn.amount,
   type: txn.type.toLowerCase(), // 'purchase' | 'usage'
 }));
@@ -150,6 +154,11 @@ const transactionsData: Transaction[] = transactionsDataRaw.map((txn: any) => ({
      setCurrentCredits(data.credits);
 
       setTransactions(transactionsData);
+
+      for (const transaction of transactionsData) {
+        console.log("Transaction:", transaction);
+      }
+
     } catch (error) {
       console.error('Error fetching user credits:', error);
       setError('Failed to load credits. Please try again.');

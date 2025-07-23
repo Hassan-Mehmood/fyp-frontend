@@ -136,28 +136,7 @@ const RootPage = () => {
               
               {/* Login buttons */}
               <div className="space-y-4">
-                <SignInButton mode="modal">
-                  <button className="w-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-white py-4 px-6 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-3 group">
-                    <Rocket size={20} />
-                    <span>Start Your Journey</span>
-                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </SignInButton>
-                
-                <div className="flex items-center">
-                  <div className="flex-1 h-px bg-white/20"></div>
-                  <span className="px-4 text-sm text-gray-400">or continue with</span>
-                  <div className="flex-1 h-px bg-white/20"></div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <SignInButton mode="modal">
-                    <button className="w-full bg-white/10 border border-white/20 text-white py-3 px-4 rounded-xl font-medium hover:bg-white/20 transition-all duration-200 flex items-center justify-center space-x-2">
-                      <Mail size={16} />
-                      <span className="text-sm">Email</span>
-                    </button>
-                  </SignInButton>
-                  
+                <div className="grid">
                   <SignInButton mode="modal">
                     <button className="w-full bg-white/10 border border-white/20 text-white py-3 px-4 rounded-xl font-medium hover:bg-white/20 transition-all duration-200 flex items-center justify-center space-x-2">
                       <Chrome size={16} />
