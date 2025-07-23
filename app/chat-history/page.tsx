@@ -359,7 +359,7 @@ const ChatHistoryPage = () => {
                   <p className="text-lg">No chat history yet</p>
                   <p className="text-sm">Start a conversation with an AI companion to see your chats here</p>
                   <button
-                    onClick={() => router.push('/characters')}
+                    onClick={() => router.push('/character-selection')}
                     className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300"
                   >
                     Choose a Character
