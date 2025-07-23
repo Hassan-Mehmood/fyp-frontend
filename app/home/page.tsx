@@ -136,7 +136,7 @@ useEffect(() => {
   }, [user?.id, isLoaded]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 ml-64">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="px-8 py-6">
@@ -207,7 +207,7 @@ useEffect(() => {
                 <p className="text-red-600 dark:text-red-400 text-sm">{creditsData.error}</p>
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <StatCard 
               number={creditsData.loading ? '' : creditsData.bots.toString()} 
               label="Available Characters" 
@@ -220,27 +220,7 @@ useEffect(() => {
                 icon={<CreditCard size={20} />} 
                 loading={creditsData.loading}
               />
-            </div>
-            
-            {/* Additional Credits Info */}
-            <SignedIn>
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Total Credits Earned: 
-                    <span className="font-semibold text-gray-900 dark:text-white ml-2">
-                      {creditsData.loading ? '...' : creditsData.totalCredits}
-                    </span>
-                  </span>
-                  <Link 
-                    href="/credits" 
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-                  >
-                    Manage Credits →
-                  </Link>
-                </div>
-              </div>
-            </SignedIn>
+            </div>  
           </div>
         </section>
 
