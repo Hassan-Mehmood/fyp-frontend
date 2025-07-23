@@ -13,7 +13,7 @@ const CharacterCard = ({
   image,
   onSelect,
   isFavorite,
-  onToggleFavorite,
+  onToggleFavorite
 }) => (
   <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 relative">
     <img src={image} alt={name} className="w-full h-48 object-cover" />
