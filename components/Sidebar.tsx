@@ -14,17 +14,27 @@ import {
   X,
   Menu
 } from "lucide-react";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, SignInButton } from '@clerk/nextjs';
 
 const Sidebar = () => {
+  const pathname = usePathname();
+  const [activeItem, setActiveItem] = useState(pathname);
+
+  console.log("Active item:", activeItem);
+
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [activeItem, setActiveItem] = useState("Home");
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
+
+  // Update active item if path changes
+  useEffect(() => {
+    setActiveItem(pathname);
+  }, [pathname]);
 
   // Check if device is mobile
   useEffect(() => {
@@ -73,14 +83,14 @@ const Sidebar = () => {
     { icon: <Clock size={18} />, label: "Chat History", href: "/chat-history", requiresAuth: true }
   ];
 
-  const handleClick = (label, href, requiresAuth) => {
+  const handleClick = (href, requiresAuth) => {
     // Check if authentication is required and user is not signed in
     if (requiresAuth && !isSignedIn) {
       setShowAuthModal(true);
       return;
     }
     
-    setActiveItem(label);
+    setActiveItem(href); // Use href to set active item
     router.push(href);
     
     // Close mobile menu after navigation
@@ -135,7 +145,7 @@ const Sidebar = () => {
     return (
       <li>
         <button
-          onClick={() => handleClick(label, href, requiresAuth)}
+          onClick={() => handleClick(href, requiresAuth)}
           disabled={!isLoaded} // Disable while auth is loading
           className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 text-left ${
             isActive
@@ -208,8 +218,8 @@ const Sidebar = () => {
                   key={item.label}
                   icon={item.icon}
                   label={item.label}
-                  href={item.href}
-                  isActive={activeItem === item.label}
+  								href={item.href}
+                  isActive={activeItem === item.href} // Compare with href
                   requiresAuth={item.requiresAuth}
                 />
               ))}
